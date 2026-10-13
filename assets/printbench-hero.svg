@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+<title id="t">PRINTBENCH 3D printing hero artwork</title><desc id="d">Industrial 3D printer, glowing nozzle, filament spools and printed parts in a dark technical workshop.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071013"/><stop offset=".52" stop-color="#0b1210"/><stop offset="1" stop-color="#050707"/></linearGradient>
+<radialGradient id="glow" cx="65%" cy="42%" r="42%"><stop stop-color="#f39a24" stop-opacity=".7"/><stop offset=".28" stop-color="#df7022" stop-opacity=".24"/><stop offset="1" stop-color="#df7022" stop-opacity="0"/></radialGradient>
+<radialGradient id="blue" cx="78%" cy="33%" r="54%"><stop stop-color="#28a7ff" stop-opacity=".36"/><stop offset="1" stop-color="#28a7ff" stop-opacity="0"/></radialGradient>
+<linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#2e3538"/><stop offset=".5" stop-color="#121819"/><stop offset="1" stop-color="#07090a"/></linearGradient>
+<linearGradient id="hot" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff7bf"/><stop offset=".22" stop-color="#ffd36c"/><stop offset=".55" stop-color="#ff7c1b"/><stop offset="1" stop-color="#8a2a00"/></linearGradient>
+<filter id="soft"><feGaussianBlur stdDeviation="18"/></filter><filter id="tiny"><feGaussianBlur stdDeviation="5"/></filter>
+<pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#7b9295" stroke-opacity=".08" stroke-width="1"/></pattern>
+</defs>
+<rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#grid)"/><rect width="1600" height="900" fill="url(#glow)"/><rect width="1600" height="900" fill="url(#blue)"/>
+<g opacity=".5"><rect x="1260" y="80" width="16" height="540" rx="8" fill="#20a9ff"/><rect x="1324" y="160" width="8" height="370" rx="4" fill="#f68b23"/><rect x="118" y="140" width="7" height="420" rx="3" fill="#168dcc"/></g>
+<g transform="translate(465 130)">
+<rect x="0" y="0" width="760" height="560" rx="26" fill="none" stroke="#556269" stroke-width="9" opacity=".46"/>
+<rect x="64" y="48" width="632" height="410" rx="12" fill="#071011" stroke="#303c40" stroke-width="5"/>
+<rect x="102" y="396" width="555" height="25" rx="6" fill="#3b4140"/><rect x="111" y="419" width="540" height="12" fill="#111817"/>
+<g transform="translate(260 72)"><rect x="0" y="0" width="238" height="54" rx="11" fill="url(#metal)" stroke="#465054" stroke-width="3"/><path d="M85 54h70l-18 48H103z" fill="#14191a" stroke="#5f6666" stroke-width="3"/><rect x="112" y="100" width="16" height="34" rx="5" fill="url(#hot)"/><circle cx="120" cy="137" r="21" fill="#ff871f" opacity=".52" filter="url(#tiny)"/><path d="M120 136l-10 30h20z" fill="#ffbb44"/></g>
+<g transform="translate(276 270)" fill="none" stroke="#ff8a20" stroke-width="4" opacity=".95"><path d="M0 140V40l94-54 94 54v100l-94 54z"/><path d="M0 40l94 54 94-54M94 94v100M47 13l94 162M141 13L47 175" opacity=".7"/></g>
+<g transform="translate(54 88)" fill="none" stroke="#1ca8ff" stroke-width="3" opacity=".35"><path d="M0 0h70v70H0zM0 100h70v70H0zM0 200h70v70H0z"/></g>
+</g>
+<g transform="translate(1070 610)"><ellipse cx="100" cy="42" rx="150" ry="28" fill="#000" opacity=".5"/><path d="M5 60c14-71 64-118 129-118s114 47 129 118c-41 18-84 26-129 26S45 78 5 60z" fill="#11171a" stroke="#39454a" stroke-width="4"/><path d="M42 45c12-47 49-78 92-78 44 0 80 31 92 78-31 10-61 14-92 14S73 55 42 45z" fill="none" stroke="#21aaff" stroke-width="5" opacity=".65"/><path d="M63 32l71-52 72 52-24 9-48-34-48 34z" fill="#f48021" opacity=".72"/></g>
+<g transform="translate(1200 520)"><circle cx="90" cy="90" r="84" fill="#151a1c" stroke="#657177" stroke-width="6"/><circle cx="90" cy="90" r="46" fill="#070909" stroke="#40494d" stroke-width="5"/><path d="M90 6a84 84 0 0 1 0 168" fill="none" stroke="#f78f26" stroke-width="10" opacity=".75"/><path d="M90 16a74 74 0 0 0 0 148" fill="none" stroke="#259bea" stroke-width="6" opacity=".45"/></g>
+<g transform="translate(180 650)" fill="none" stroke="#9bb7bb" stroke-opacity=".52"><path d="M0 110V34l66-34 66 34v76l-66 34z" stroke-width="4"/><path d="M66 0v144M0 34l66 38 66-38" stroke-width="3"/></g>
+<g filter="url(#soft)" opacity=".45"><ellipse cx="970" cy="382" rx="210" ry="120" fill="#ff6f16"/><ellipse cx="1320" cy="285" rx="160" ry="120" fill="#168ee0"/></g>
+<g opacity=".8" font-family="monospace" fill="#a9bbc0"><text x="92" y="770" font-size="18" letter-spacing="8">ADDITIVE MANUFACTURING // P2S // AMS 2 PRO</text><text x="92" y="808" font-size="12" fill="#6f8184" letter-spacing="5">STL · 3MF · G-CODE · MATERIAL · ENERGY · COST</text></g>
+</svg>
