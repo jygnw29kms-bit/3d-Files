@@ -30,7 +30,7 @@
   <div class="machine-head"><div class="machine-icon">D</div><div><h1 id="pageTitle">BAMBU LAB P2S</h1><p id="pageSub">PROFESSIONAL ADDITIVE MANUFACTURING</p></div></div>
   <div class="head-state"><span class="dot"></span><b id="machineState">ONLINE</b></div>
   <div class="clock"><b id="dateLabel">--.--.----</b><b id="clock">--:--</b><small>LIVE DATEN</small></div>
-  <div class="ranges"><button class="active">LIVE</button><button>24H</button><button>7D</button><button>30D</button></div>
+  <div class="ranges"><button class="active" data-range="live">LIVE</button><button data-range="24h">24H</button><button data-range="7d">7D</button><button data-range="30d">30D</button></div>
 </header>
 <div id="overviewView" class="view active">
   <section class="upper-master">
@@ -59,7 +59,7 @@
     </div>
   </section>
   <section class="middle-master">
-    <article class="panel ams-panel"><div class="panel-title">AMS AMS 2 PRO <span>Material System</span></div><div class="ams-layout"><div class="ams-visual"><img src="assets/bambu-official/p2s-11.jpg"></div><div class="ams-slot"><span>Aktiver Slot</span><strong id="slot">--</strong><div class="spool-mini"></div><dl><div><dt>Material</dt><dd id="amsMat">--</dd></div><div><dt>Temperatur</dt><dd id="amsTemp">--&deg;C</dd></div><div><dt>Feuchte (raw)</dt><dd id="amsHum">--</dd></div><div><dt>RFID UID</dt><dd id="rfid">&mdash;</dd></div></dl></div></div></article>
+    <article class="panel ams-panel"><div class="panel-title">AMS AMS 2 PRO <span>Material System</span></div><div class="ams-layout"><div class="ams-visual"><img src="assets/bambu-official/p2s-11.jpg"></div><div class="ams-slot"><span>Aktiver Slot</span><strong id="slot">--</strong><div class="spool-mini"></div><div id="amsSlotStrip" class="ams-slot-strip"></div><dl><div><dt>Material</dt><dd id="amsMat">--</dd></div><div><dt>Temperatur</dt><dd id="amsTemp">--&deg;C</dd></div><div><dt>Feuchte (raw)</dt><dd id="amsHum">--</dd></div><div><dt>RFID UID</dt><dd id="rfid">&mdash;</dd></div></dl></div></div></article>
     <article class="panel slicer-panel"><div class="panel-title">DATA SLICER / DRUCKDATEN</div><div class="slicer-body"><dl><div><dt>Profil</dt><dd id="dProfile">--</dd></div><div><dt>Hersteller</dt><dd id="vendor">--</dd></div><div><dt>Material</dt><dd id="material">--</dd></div><div><dt>Filament</dt><dd id="filament">--</dd></div><div><dt>Layer</dt><dd id="layers">--</dd></div><div><dt>Layerh&ouml;he</dt><dd id="lh">--</dd></div><div><dt>Infill</dt><dd id="infill">--</dd></div><div><dt>W&auml;nde</dt><dd id="walls">--</dd></div><div><dt>Modellzeit</dt><dd id="modelTime">--</dd></div><div><dt>Gesamtzeit</dt><dd id="totalTime">--</dd></div></dl><img src="assets/lst-clips.png"></div></article>
     <article class="panel cost-panel"><div class="panel-title">07 KOSTENRECHNER <span>KOMPAKT</span></div><div class="costrows"><span>Filament<b id="cMat">0,00 &euro;</b></span><span>Strom<b id="cPower">0,00 &euro;</b></span><span>Maschinenzeit<b id="cMachine">0,00 &euro;</b></span><span>Selbstkosten<b id="cSelf">0,00 &euro;</b></span><span>Marge<b id="cMargin">0,00 &euro;</b></span></div><div class="sell"><span>Verkaufspreis</span><strong id="cTotal">0,00 &euro;</strong></div><details><summary>PARAMETER</summary><div class="inputs"><label>&euro;/kg<input id="priceKg" value="18.99"></label><label>&euro;/kWh<input id="powerPrice" value="0.40"></label><label>&euro;/h<input id="machineRate" value="0.65"></label><label>Marge %<input id="margin" value="20"></label></div></details></article>
   </section>
