@@ -3,6 +3,7 @@ import json, signal, socket, ssl, threading, time
 import paho.mqtt.client as mqtt
 import collector
 import push_live
+import media_worker
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -87,6 +88,9 @@ def main():
     client.connect(collector.P2S_HOST, 8883, keepalive=30)
     client.loop_start()
     print('[PRINTBENCH] Collector started', flush=True)
+    media_thread = threading.Thread(target=media_worker.run_forever, args=(STOP,), daemon=True, name='printbench-media')
+    media_thread.start()
+    print('[PRINTBENCH] Media worker started', flush=True)
 
     last_slice = 0.0
     last_push = 0.0

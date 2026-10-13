@@ -35,7 +35,7 @@
 <div id="overviewView" class="view active">
   <section class="upper-master">
     <article class="machine-live panel-edge">
-      <img class="machine-photo" src="assets/bambu-official/p2s-2.jpg">
+      <img id="machineLiveImage" class="machine-photo" src="runtime/media/latest.jpg" data-fallback="assets/bambu-official/p2s-2.jpg">
       <div class="machine-brand">Bambu Lab</div>
       <div class="cam-overlay"><b>LIVE LIVE</b><span>1080P &middot; LAN</span></div>
     </article>
@@ -65,7 +65,7 @@
   </section>
   <section class="lower-master">
     <article class="panel toolpath-panel"><div class="panel-title">PATH TOOLPATH VISUALISIERUNG</div><img src="assets/toolpath-map.svg"><pre id="gcode">G1 X62.318 Y104.227 E0.013\nG1 X62.412 Y104.318 E0.011\nG1 X62.501 Y104.403 E0.012\nG1 X62.612 Y104.512 E0.014\nG1 X62.723 Y104.621 E0.014</pre></article>
-    <article class="panel camera-panel"><div class="panel-title">NET LIVE KAMERA</div><img src="assets/bambu-official/p2s-2.jpg"><span class="rec">LIVE REC</span></article>
+    <article class="panel camera-panel"><div class="panel-title">NET LIVE KAMERA</div><img id="cameraLiveImage" src="runtime/media/latest.jpg" data-fallback="assets/bambu-official/p2s-2.jpg"><span class="rec">LIVE REC</span></article>
     <article class="panel gallery-panel"><div class="panel-title">GALLERY PRODUKTIONSGALERIE</div><div class="gallery"><figure><img src="assets/lst-clips.png"><figcaption><b>428er LST Clips</b><small>Aktueller Druck</small></figcaption></figure><figure><img src="assets/lst-klammer.png"><figcaption><b>24er LST Klammer</b><small>Projekt</small></figcaption></figure><figure><img src="assets/bambu-official/p2s-9.jpg"><figcaption><b>Individuelle Teile</b><small>Prototyping</small></figcaption></figure></div></article>
   </section>
 </div>
