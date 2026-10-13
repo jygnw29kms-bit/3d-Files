@@ -2,6 +2,17 @@
 
 3D-Druckmodelle und Druckplatten.
 
+## Druckkosten-Rechner
+
+- [P2S + AMS 2 Pro Druckkosten-Rechner](Druckkosten-Rechner/index.html)
+- Upload/Auswertung von STL, 3MF und G-Code
+- Materialkosten über zentralen €/kg-Katalog mit Marken wie KINGROON, SUNLU, JAYO, eSUN, GEEETECH, Anycubic, Elegoo, Bambu Lab, Polymaker, Prusament, Extrudr und Fiberlogy
+- Preisquellen-Katalog: 3D Filament Profiles, Open Filament Database, SpoolHound, Spulenheld und Printerials
+- Strompreis standardmäßig 0,40 €/kWh
+- Bambu Lab P2S Energie, Maschinenstundensatz, Ausschussreserve, Vorbereitung/Aufbereitung und Marge
+- AMS 2 Pro separat: Betrieb und aktive Filamenttrocknung
+- lokale Preis-Overrides im Browser
+
 ## LST-Klammer: verstärkte Schenkel, Bambu Lab P2S
 
 - [3MF: Druckplatte mit 24 Klammern](LST-Klammer/LST-Klammer-P2S-24x-4mm.3mf)
