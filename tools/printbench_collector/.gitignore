@@ -6,3 +6,4 @@ __pycache__/
 *.log
 preview/data.json
 preview/preview-check.png
+.push-token*

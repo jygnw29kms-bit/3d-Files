@@ -2,6 +2,7 @@ from __future__ import annotations
 import json, signal, socket, ssl, threading, time
 import paho.mqtt.client as mqtt
 import collector
+import push_live
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -86,6 +87,7 @@ def main():
 
     last_slice = 0.0
     last_push = 0.0
+    last_web_push = 0.0
     while not STOP.wait(1):
         now = time.time()
         if now - last_slice >= 15:
@@ -97,6 +99,14 @@ def main():
         if state['connected'] and now - last_push >= 60:
             client.publish(topic_req, json.dumps({'pushing': {'sequence_id': str(int(now)), 'command': 'pushall'}}))
             last_push = now
+        if now - last_web_push >= 5:
+            try:
+                result = push_live.push_once()
+                if int(now) % 30 < 5:
+                    print('[PRINTBENCH] WEB PUSH OK ' + json.dumps(result, ensure_ascii=False), flush=True)
+            except Exception as e:
+                print('[PRINTBENCH] web push warning:', str(e), flush=True)
+            last_web_push = now
 
     client.loop_stop()
     try: client.disconnect()

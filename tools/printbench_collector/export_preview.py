@@ -51,6 +51,23 @@ def main():
         'dry_time': unit.get('dry_time', 0),
     }
 
+    stats_row = db.execute('''SELECT COUNT(*) samples,
+        MIN(nozzle_c) nozzle_min, MAX(nozzle_c) nozzle_max, AVG(nozzle_c) nozzle_avg,
+        MIN(bed_c) bed_min, MAX(bed_c) bed_max, AVG(bed_c) bed_avg,
+        MIN(progress) progress_min, MAX(progress) progress_max,
+        MIN(ts) first_ts, MAX(ts) last_ts
+        FROM telemetry''').fetchone()
+    recent_jobs = db.execute('''SELECT detected_at,origin_path,slicer,total_time_sec,layer_count,
+        filament_g,filament_m,filament_type,filament_vendor,filament_profile,layer_height,
+        infill_percent,infill_pattern,wall_loops,bed_type
+        FROM slicer_jobs ORDER BY id DESC LIMIT 12''').fetchall()
+    jobs = []
+    for row in recent_jobs:
+        item = dict(row)
+        if item.get('origin_path'):
+            item['origin_path'] = Path(item['origin_path']).name
+        jobs.append(item)
+
     payload = {
         'generated_at': datetime.now(timezone.utc).isoformat(),
         'source': 'PRINTBENCH Collector / P2S LAN MQTT + Bambu Studio',
@@ -59,6 +76,8 @@ def main():
         'slicer': slicer_data,
         'history': [dict(r) for r in history],
         'sample_count': db.execute('SELECT COUNT(*) FROM telemetry').fetchone()[0],
+        'stats': dict(stats_row),
+        'jobs': jobs,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
