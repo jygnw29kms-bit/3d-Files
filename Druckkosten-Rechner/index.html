@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#121212">
+  <title>3D-Druckkosten Rechner · Bambu Lab P2S</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">3D-Files · Kalkulation</p>
+        <h1>Druckkosten-Rechner</h1>
+        <p class="lead">STL, 3MF oder G-Code laden, Material auswählen und reale Druckkosten für den Bambu Lab P2S kalkulieren.</p>
+      </div>
+      <div class="status-card">
+        <span>P2S · 230 V</span>
+        <strong>0,40 €/kWh</strong>
+        <small>Strompreis editierbar</small>
+      </div>
+    </header>
+
+    <section class="panel upload-panel">
+      <label class="drop" id="dropZone">
+        <input id="fileInput" type="file" accept=".stl,.3mf,.gcode,.gco,.bgcode">
+        <strong>Datei hier ablegen oder auswählen</strong>
+        <span>Unterstützt: STL · 3MF · G-Code</span>
+      </label>
+      <div class="file-meta" id="fileMeta">Noch keine Datei geladen.</div>
+    </section>
+
+    <div class="grid two">
+      <section class="panel">
+        <div class="section-head"><h2>Druckdaten</h2><span id="qualityBadge" class="badge">manuell</span></div>
+        <div class="form-grid">
+          <label>Druckdauer (h)<input id="hours" type="number" min="0" step="0.01" value="1"></label>
+          <label>Filament (g)<input id="grams" type="number" min="0" step="0.1" value="20"></label>
+          <label>Filamentlänge (m)<input id="meters" type="number" min="0" step="0.1" value="6.7"></label>
+          <label>Anzahl Teile<input id="parts" type="number" min="1" step="1" value="1"></label>
+        </div>
+        <p class="hint" id="parseHint">Bei geslictem G-Code/3MF werden Zeit und Filament automatisch übernommen. STL-Werte sind Schätzwerte und können überschrieben werden.</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head"><h2>Material</h2><button id="reloadPrices" class="ghost">Preise neu laden</button></div>
+        <div class="form-grid">
+          <label>Marke<select id="brand"></select></label>
+          <label>Material<select id="material"></select></label>
+          <label>Preis €/kg<input id="priceKg" type="number" min="0" step="0.01"></label>
+          <label>Dichte g/cm³<input id="density" type="number" min="0.5" step="0.01"></label>
+        </div>
+        <div class="source" id="priceSource">Preisquelle wird geladen …</div>
+      </section>
+    </div>
+
+    <div class="grid two">
+      <section class="panel">
+        <h2>P2S & Energie</h2>
+        <div class="form-grid">
+          <label>Strompreis €/kWh<input id="electricity" type="number" min="0" step="0.01" value="0.40"></label>
+          <label>Dauerleistung W<input id="steadyWatts" type="number" min="0" step="1" value="200"></label>
+          <label>Aufheizleistung W<input id="heatWatts" type="number" min="0" step="1" value="1200"></label>
+          <label>Aufheizzeit min<input id="heatMinutes" type="number" min="0" step="1" value="5"></label>
+          <label>Maschine €/h<input id="machineRate" type="number" min="0" step="0.01" value="0.65"></label>
+          <label>Ausschussreserve %<input id="wastePercent" type="number" min="0" step="1" value="5"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Vorbereitung / Aufbereitung</h2>
+        <div class="form-grid">
+          <label>Grundaufwand €<input id="prepBase" type="number" min="0" step="0.10" value="2.50"></label>
+          <label>Basis-Aufschlag %<input id="prepPercent" type="number" min="0" step="1" value="15"></label>
+          <label>zusätzlich je Druckstunde %<input id="prepPerHour" type="number" min="0" step="0.1" value="1.5"></label>
+          <label>Marge %<input id="marginPercent" type="number" min="0" step="1" value="20"></label>
+        </div>
+        <p class="hint">Der Aufbereitungsaufschlag wächst mit der Druckdauer: Basis-% + Stunden × Zusatz-%.</p>
+      </section>
+    </div>
+
+    <section class="panel results">
+      <div class="section-head"><h2>Kalkulation</h2><button id="resetBtn" class="ghost">Zurücksetzen</button></div>
+      <div class="result-grid">
+        <article><span>Material</span><strong id="materialCost">0,00 €</strong></article>
+        <article><span>Strom</span><strong id="energyCost">0,00 €</strong></article>
+        <article><span>Maschine</span><strong id="machineCost">0,00 €</strong></article>
+        <article><span>Vorbereitung</span><strong id="prepCost">0,00 €</strong></article>
+        <article><span>Selbstkosten</span><strong id="subtotalCost">0,00 €</strong></article>
+        <article class="primary"><span>Kalkulierter Preis</span><strong id="totalCost">0,00 €</strong></article>
+      </div>
+      <div class="details" id="details"></div>
+    </section>
+
+    <section class="panel stl-options" id="stlOptions" hidden>
+      <h2>STL-Schätzung</h2>
+      <div class="form-grid">
+        <label>Infill %<input id="infill" type="number" min="0" max="100" step="1" value="15"></label>
+        <label>Wand-/Deckelanteil %<input id="shellPercent" type="number" min="0" max="100" step="1" value="25"></label>
+        <label>effektiver Volumenstrom mm³/s<input id="flowRate" type="number" min="1" step="1" value="16"></label>
+        <label>Zeitfaktor<input id="timeFactor" type="number" min="1" step="0.1" value="1.8"></label>
+      </div>
+      <p class="hint">Für Angebote besser eine geslicte 3MF/G-Code-Datei hochladen. Nur dort sind Druckzeit, Purge, Support und reale Extrusionsmenge zuverlässig enthalten.</p>
+    </section>
+
+    <footer>Alle Werte bleiben lokal im Browser. Preis-Overrides werden in localStorage gespeichert.</footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
