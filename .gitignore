@@ -1,0 +1,26 @@
+# PRINTBENCH runtime / generated artifacts
+runtime/
+site-deploy/
+*.log
+*.err
+*.out
+screen*.png
+qa-*.png
+qa-index.html
+live-final-*.png
+public-live-media.png
+
+# Collector runtime/cache
+/tools/printbench_collector/media/
+/tools/printbench_collector/preview/*.png
+/tools/printbench_collector/preview/assets/
+/tools/printbench_collector/__pycache__/
+/tools/printbench_collector/*.pyc
+/tools/printbench_collector/.push-token
+
+# Local helper / diagnostics
+/tools/make_printbench_key.cmd
+/tools/printbench_ssh_finalize.ps1
+/tools/printbench_ssh_harden.ps1
+/tools/printbench_ssh_finalize.log
+/tools/ssh_vvv.*
