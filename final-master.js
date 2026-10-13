@@ -1,175 +1,20 @@
-const $ = (id) => document.getElementById(id);
-const euro = (n) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(Number(n || 0));
-const dur = (seconds) => {
-  const s = Number(seconds || 0);
-  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-};
-let DATA = {};
-
-function setText(id, value) {
-  const el = $(id);
-  if (el) el.textContent = value;
-}
-
-function drawChart(history) {
-  const c = $('tempChart');
-  if (!c) return;
-  const dpr = window.devicePixelRatio || 1;
-  const w = c.clientWidth || 600;
-  const h = c.clientHeight || 180;
-  c.width = w * dpr;
-  c.height = h * dpr;
-  const ctx = c.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = '#243039';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    const y = 20 + i * (h - 35) / 4;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-  for (const [key, color] of [['nozzle_c', '#ff7900'], ['bed_c', '#40bfff']]) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    history.forEach((p, i) => {
-      const xx = i / Math.max(1, history.length - 1) * w;
-      const yy = h - 15 - (Number(p[key] || 0) / 260) * (h - 30);
-      if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
-    });
-    ctx.stroke();
-  }
-}
-
-function calc(data) {
-  const s = data.slicer || {};
-  const hours = Number(s.total_time_sec || 0) / 3600;
-  const grams = Number(s.filament_g || 0);
-  const priceKg = Number($('priceKg')?.value || 18.99);
-  const powerPrice = Number($('powerPrice')?.value || 0.40);
-  const machineRate = Number($('machineRate')?.value || 0.65);
-  const marginPct = Number($('margin')?.value || 20);
-  const material = grams / 1000 * priceKg;
-  const electricity = (0.2 * hours + 0.1) * powerPrice;
-  const machine = hours * machineRate;
-  const self = material + electricity + machine;
-  const margin = self * marginPct / 100;
-  const total = self + margin;
-  [['cMat', material], ['cPower', electricity], ['cMachine', machine], ['cSelf', self], ['cMargin', margin], ['cTotal', total]]
-    .forEach(([id, value]) => setText(id, euro(value)));
-}
-
-function fill(data) {
-  DATA = data;
-  const live = data.live || {};
-  const slicer = data.slicer || {};
-  const ams = data.ams || {};
-  const progress = Math.round(Number(live.progress || 0));
-  setText('progress', `${progress}%`);
-  const bar = $('barFill'); if (bar) bar.style.width = `${progress}%`;
-  const ring = $('ring'); if (ring) ring.style.background = `conic-gradient(var(--orange) ${progress * 3.6}deg,#202930 0)`;
-  setText('layer', `${live.layer_current ?? '--'} / ${live.layer_total ?? '--'}`);
-  setText('rest', `~ ${Math.round(Number(live.remaining_min || 0))} min`);
-  setText('speed', live.speed_level ?? '--');
-  setText('nozzle', `${Math.round(Number(live.nozzle_c || 0))} \u00b0C`);
-  setText('bed', `${Math.round(Number(live.bed_c || 0))} \u00b0C`);
-  setText('wifi', live.wifi_rssi || '--');
-  setText('profile', slicer.filament_profile || '--');
-  setText('dProfile', slicer.filament_profile || '--');
-  setText('vendor', slicer.filament_vendor || '--');
-  setText('material', slicer.filament_type || '--');
-  setText('filament', `${Number(slicer.filament_g || 0).toFixed(2)} g / ${Number(slicer.filament_m || 0).toFixed(3)} m`);
-  setText('layers', slicer.layer_count ?? '--');
-  setText('lh', `${slicer.layer_height ?? '--'} mm`);
-  setText('infill', `${slicer.infill_percent ?? '--'} % ${slicer.infill_pattern || ''}`);
-  setText('walls', slicer.wall_loops ?? '--');
-  setText('modelTime', dur(slicer.model_time_sec));
-  setText('totalTime', dur(slicer.total_time_sec));
-  setText('slot', ams.active_slot ?? '--');
-  setText('amsMat', ams.material || '--');
-  setText('amsTemp', `${ams.temp_c ?? '--'} \u00b0C`);
-  setText('amsHum', `${ams.humidity_raw ?? '--'} raw`);
-  setText('rfid', ams.tag_uid_present ? 'UID erkannt' : '\u2014');
-  if (slicer.origin_path) setText('jobName', slicer.origin_path.replace(/\.3mf$/i, '').replace(/_/g, ' '));
-  drawChart(data.history || []);
-  calc(data);
-  const view = document.body.dataset.view;
-  if (view && view !== 'uebersicht') renderView(view, data);
-}
-
-async function load() {
-  const endpoint = window.LIVE_ENDPOINT || 'data.json';
-  const response = await fetch(`${endpoint}?t=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`live data ${response.status}`);
-  fill(await response.json());
-}
-
-const viewMap = {
-  'ÜBERSICHT': 'uebersicht',
-  'LIVE DRUCK': 'live',
-  'HISTORIE': 'historie',
-  'MATERIAL': 'material',
-  'AMS 2 PRO': 'ams',
-  'STATISTIKEN': 'statistik',
-  'KOSTEN': 'kosten',
-  'PROJEKTE': 'projekte'
-};
-
-function renderView(view, data) {
-  let host = $('subview');
-  if (!host) {
-    host = document.createElement('section');
-    host.id = 'subview';
-    host.className = 'subview';
-    document.querySelector('main').appendChild(host);
-  }
-  const live = data.live || {};
-  const slicer = data.slicer || {};
-  const ams = data.ams || {};
-  const stats = data.stats || {};
-  const jobs = data.jobs || [];
-  const img = (n) => `assets/bambu-official/p2s-${n}.jpg`;
-  const views = {
-    live: `<div class="view-title"><h2>LIVE DRUCK</h2><p>P2S / MQTT / 5-Sekunden-Stream</p></div><div class="live-work"><img src="${img(2)}"><div class="view-kpis"><b>${Math.round(Number(live.progress || 0))}%</b><span>Layer ${live.layer_current ?? '--'} / ${live.layer_total ?? '--'}</span><span>Düse ${Math.round(Number(live.nozzle_c || 0))} °C · Bett ${Math.round(Number(live.bed_c || 0))} °C</span><span>Restzeit ${Math.round(Number(live.remaining_min || 0))} min</span></div></div>`,
-    historie: `<div class="view-title"><h2>HISTORIE</h2><p>Zuletzt erkannte Slicer-Jobs</p></div><div class="history-list">${jobs.map(j => `<div><b>${j.origin_path || 'Job'}</b><span>${j.filament_vendor || ''} ${j.filament_type || ''}</span><span>${Number(j.filament_g || 0).toFixed(1)} g</span><span>${dur(j.total_time_sec)}</span></div>`).join('') || '<p>Noch keine Jobs.</p>'}</div>`,
-    material: `<div class="view-title"><h2>MATERIAL</h2><p>Aktuelles Druckmaterial</p></div><div class="material-view"><img src="${img(11)}"><div><h3>${slicer.filament_vendor || '--'} ${slicer.filament_type || '--'}</h3><p>${slicer.filament_profile || '--'}</p><dl><dt>Dichte</dt><dd>${slicer.density ?? '--'} g/cm³</dd><dt>Durchmesser</dt><dd>${slicer.diameter ?? '--'} mm</dd><dt>Aktiver Slot</dt><dd>${ams.active_slot ?? '--'}</dd><dt>AMS Temp.</dt><dd>${ams.temp_c ?? '--'} °C</dd></dl></div></div>`,
-    ams: `<div class="view-title"><h2>AMS 2 PRO</h2><p>Materialsystem / Live-Status</p></div><div class="ams-view"><img src="${img(11)}"><div class="view-kpis"><b>Slot ${ams.active_slot ?? '--'}</b><span>${ams.material || '--'}</span><span>${ams.temp_c ?? '--'} °C</span><span>Feuchte ${ams.humidity_raw ?? '--'} raw</span><span>Trocknung ${ams.drying ? 'AKTIV' : 'AUS'}</span></div></div>`,
-    statistik: `<div class="view-title"><h2>STATISTIKEN</h2><p>Collector / SQLite</p></div><div class="stat-grid"><article><span>Samples</span><b>${stats.samples || data.sample_count || 0}</b></article><article><span>Düse Ø</span><b>${Number(stats.nozzle_avg || 0).toFixed(1)}°</b></article><article><span>Düse Max</span><b>${Number(stats.nozzle_max || 0).toFixed(1)}°</b></article><article><span>Bett Ø</span><b>${Number(stats.bed_avg || 0).toFixed(1)}°</b></article><article><span>Fortschritt Max</span><b>${Number(stats.progress_max || 0).toFixed(0)}%</b></article></div>`,
-    kosten: `<div class="view-title"><h2>KOSTEN</h2><p>Live-Kalkulation aus dem aktuellen Slicer-Job</p></div><div class="cost-standalone"><div><span>Filament</span><b>${$('cMat')?.textContent || '0,00 €'}</b></div><div><span>Strom</span><b>${$('cPower')?.textContent || '0,00 €'}</b></div><div><span>Maschinenzeit</span><b>${$('cMachine')?.textContent || '0,00 €'}</b></div><div><span>Selbstkosten</span><b>${$('cSelf')?.textContent || '0,00 €'}</b></div><div class="total"><span>Verkaufspreis</span><b>${$('cTotal')?.textContent || '0,00 €'}</b></div></div>`,
-    projekte: `<div class="view-title"><h2>PROJEKTE</h2><p>Produktionsdateien und reale Druckplatten</p></div><div class="project-grid"><article><img src="assets/lst-clips.png"><h3>428er LST Clips</h3><a href="LST-Clips/P2S-KINGROON-HS-PLA/LST_428_P2S_KINGROON_HS_PLA.3mf">3MF öffnen</a></article><article><img src="assets/lst-klammer.png"><h3>24er LST Klammer</h3><a href="LST-Klammer/LST-Klammer-P2S-24x-4mm.3mf">3MF öffnen</a></article></div>`
-  };
-  host.innerHTML = views[view] || '';
-}
-
-document.querySelectorAll('.sidebar nav a').forEach((a) => {
-  const view = viewMap[a.textContent.trim()] || 'uebersicht';
-  a.href = `#${view}`;
-  a.dataset.view = view;
-  a.addEventListener('click', (event) => {
-    event.preventDefault();
-    document.querySelectorAll('.sidebar nav a').forEach(x => x.classList.remove('active'));
-    a.classList.add('active');
-    document.body.dataset.view = view;
-    document.querySelectorAll('main > .grid').forEach(x => { x.hidden = view !== 'uebersicht'; });
-    const host = $('subview');
-    if (view === 'uebersicht') {
-      if (host) host.hidden = true;
-    } else {
-      if (host) host.hidden = false;
-      renderView(view, DATA);
-    }
-    history.replaceState(null, '', `#${view}`);
-  });
-});
-
-['priceKg', 'powerPrice', 'machineRate', 'margin'].forEach(id => $(id)?.addEventListener('input', () => calc(DATA)));
-setInterval(() => setText('clock', new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })), 1000);
-load().catch(console.error);
-setInterval(() => load().catch(console.error), 5000);
-
-function activateInitialView(){
-  const requested=(location.hash||'#uebersicht').slice(1);
-  const link=[...document.querySelectorAll('.sidebar nav a')].find(a=>a.dataset.view===requested);
-  if(link && requested!=='uebersicht') link.click();
-}
-window.addEventListener('DOMContentLoaded',activateInitialView);
+const $=id=>document.getElementById(id);const euro=n=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(n||0));const dur=s=>{s=Number(s||0);return `${Math.floor(s/3600)}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`};let DATA={};let COST={};
+function txt(id,v){const e=$(id);if(e)e.textContent=v}
+function esc(v){return String(v??'--').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function drawChart(history,canvasId='tempChart'){const c=$(canvasId);if(!c)return;const dpr=devicePixelRatio||1,w=c.clientWidth||600,h=c.clientHeight||170;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);x.clearRect(0,0,w,h);x.strokeStyle='#202c34';x.lineWidth=1;for(let i=0;i<5;i++){let y=14+i*(h-28)/4;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}[['nozzle_c','#ff7a00'],['bed_c','#3fc2ff']].forEach(([key,col])=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();history.forEach((p,i)=>{let xx=i/Math.max(1,history.length-1)*w,yy=h-12-(Number(p[key]||0)/260)*(h-24);i?x.lineTo(xx,yy):x.moveTo(xx,yy)});x.stroke()})}
+function calc(d){const s=d.slicer||{},h=Number(s.total_time_sec||0)/3600,g=Number(s.filament_g||0),pk=Number($('priceKg')?.value||18.99),pp=Number($('powerPrice')?.value||.40),mr=Number($('machineRate')?.value||.65),mp=Number($('margin')?.value||20),mat=g/1000*pk,power=(.2*h+.1)*pp,machine=h*mr,self=mat+power+machine,margin=self*mp/100,total=self+margin;COST={mat,power,machine,self,margin,total};[['cMat',mat],['cPower',power],['cMachine',machine],['cSelf',self],['cMargin',margin],['cTotal',total]].forEach(([id,v])=>txt(id,euro(v)))}
+function fill(d){DATA=d;const l=d.live||{},s=d.slicer||{},a=d.ams||{},sp=s.speeds||{};const p=Math.round(Number(l.progress||0));txt('progress',`${p}%`);if($('barFill'))$('barFill').style.width=`${p}%`;if($('ring'))$('ring').style.background=`conic-gradient(var(--orange) ${p*3.6}deg,#202a31 0)`;txt('layer',`${l.layer_current??'--'} / ${l.layer_total??'--'}`);txt('rest',`${Math.round(Number(l.remaining_min||0))} min`);txt('speed',l.speed_level??'--');txt('speedMag',`${l.speed_mag??'--'}%`);txt('nozzle',`${Math.round(Number(l.nozzle_c||0))}\u00b0C`);txt('nozzleTop',`${Math.round(Number(l.nozzle_c||0))}\u00b0C`);txt('nozzleTarget',`${Math.round(Number(l.nozzle_target_c||0))}\u00b0C`);txt('bed',`${Math.round(Number(l.bed_c||0))}\u00b0C`);txt('wifi',String(l.wifi_rssi??'--').replace('dBm',''));txt('profile',s.filament_profile||'--');txt('dProfile',s.filament_profile||'--');txt('vendor',s.filament_vendor||'--');txt('material',s.filament_type||'--');txt('filament',`${Number(s.filament_g||0).toFixed(2)} g / ${Number(s.filament_m||0).toFixed(3)} m`);txt('layers',s.layer_count??'--');txt('lh',`${s.layer_height??'--'} mm`);txt('infill',`${s.infill_percent??'--'}% ${s.infill_pattern||''}`);txt('walls',s.wall_loops??'--');txt('modelTime',dur(s.model_time_sec));txt('totalTime',dur(s.total_time_sec));txt('slot',a.active_slot??'--');txt('slotBadge',a.active_slot??'--');txt('amsMat',a.material||'--');txt('amsTemp',`${a.temp_c??'--'}\u00b0C`);txt('amsHum',a.humidity_raw??'--');txt('rfid',a.tag_uid_present?'UID erkannt':'--');txt('outerSpeed',sp.outer_wall?`${sp.outer_wall} mm/s`:'--');txt('innerSpeed',sp.inner_wall?`${sp.inner_wall} mm/s`:'--');txt('infillSpeed',sp.infill?`${sp.infill} mm/s`:'--');txt('travelSpeed',sp.travel?`${sp.travel} mm/s`:'--');if(s.origin_path)txt('jobName',s.origin_path.replace(/\.3mf$/i,'').replace(/_/g,' '));txt('machineState',l.print_state||'ONLINE');drawChart(d.history||[]);calc(d);if(document.body.dataset.view!=='overview')renderView(document.body.dataset.view,d)}
+async function load(){const ep=window.LIVE_ENDPOINT||'data.json';const r=await fetch(`${ep}?t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(`live ${r.status}`);fill(await r.json())}
+function panel(title,body,cls=''){return `<article class="data-panel ${cls}"><h3>${title}</h3>${body}</article>`}
+function dl(rows){return `<dl>${rows.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>`}
+function head(title,sub){return `<div class="view-head"><div><h2 class="page-title">${title}</h2><p class="page-kicker">${sub}</p></div><span class="live-tag">● LIVE / LAN ONLY</span></div>`}
+function renderView(view,d){const host=$('subview'),l=d.live||{},s=d.slicer||{},a=d.ams||{},st=d.stats||{},jobs=d.jobs||[],sp=s.speeds||{};let h='';if(view==='live'){h=head('LIVE DRUCK','P2S / MQTT / LIVEVIEW / MASCHINENZUSTAND')+`<div class="subhero"><article class="panel"><div class="panel-title">LIVEVIEW</div><img class="hero-photo" src="assets/bambu-official/p2s-2.jpg"></article><article class="panel kpi-stack"><div><span>FORTSCHRITT</span><b>${Math.round(Number(l.progress||0))}%</b></div><div><span>LAYER</span><b>${l.layer_current??'--'} / ${l.layer_total??'--'}</b></div><div><span>RESTZEIT</span><b>${Math.round(Number(l.remaining_min||0))} min</b></div><div><span>SPEED</span><b>Level ${l.speed_level??'--'} / ${l.speed_mag??'--'}%</b></div></article></div><div class="panel-grid four"><div class="fan-card"><span>PART FAN</span><b>${l.fan_part??'--'}</b></div><div class="fan-card"><span>AUX FAN</span><b>${l.fan_aux??'--'}</b></div><div class="fan-card"><span>CHAMBER FAN</span><b>${l.fan_chamber??'--'}</b></div><div class="fan-card"><span>HEATBREAK FAN</span><b>${l.fan_heatbreak??'--'}</b></div></div><div class="panel-grid three">${panel('MASCHINENSTATUS',dl([['G-Code State',l.print_state],['Print Stage',l.print_stage],['Sub Stage',l.print_sub_stage],['Fehler',l.print_error],['Fail Reason',l.fail_reason]]))}${panel('TEMPERATUR',dl([['Duese',`${l.nozzle_c??'--'} C`],['Duese Ziel',`${l.nozzle_target_c??'--'} C`],['Bett',`${l.bed_c??'--'} C`],['Bett Ziel',`${l.bed_target_c??'--'} C`]]))}${panel('VERBINDUNG',dl([['WLAN',l.wifi_rssi],['Liveview',`${l.camera?.resolution||'--'} / RTSPS`],['MQTT','TLS 8883'],['Collector','5 s Push']]))}</div>`}
+if(view==='history'){h=head('HISTORIE','ERKANNTE SLICER-JOBS UND DRUCKDATEN')+`<div class="history-table"><div class="history-row"><b>JOB</b><b>MATERIAL</b><b>FILAMENT</b><b>ZEIT</b></div>${jobs.map(j=>`<div class="history-row"><span>${esc(j.origin_path||'Job')}</span><span>${esc((j.filament_vendor||'')+' '+(j.filament_type||''))}</span><span>${Number(j.filament_g||0).toFixed(1)} g</span><span>${dur(j.total_time_sec)}</span></div>`).join('')||'<div class="history-row">Noch keine Jobs</div>'}</div><div class="panel-grid two">${panel('TELEMETRIE',dl([['Samples',st.samples||d.sample_count],['Erster Datensatz',st.first_ts],['Letzter Datensatz',st.last_ts]]))}${panel('TEMPERATURBEREICH',dl([['Duese min',`${Number(st.nozzle_min||0).toFixed(1)} C`],['Duese max',`${Number(st.nozzle_max||0).toFixed(1)} C`],['Bett min',`${Number(st.bed_min||0).toFixed(1)} C`],['Bett max',`${Number(st.bed_max||0).toFixed(1)} C`]]))}</div>`}
+if(view==='material'){h=head('MATERIAL','FILAMENT / FLOW / SLICER-PROFIL')+`<div class="subhero"><article class="panel"><div class="panel-title">AKTUELLES MATERIAL</div><img class="hero-photo" src="assets/bambu-official/p2s-11.jpg"></article><article class="panel kpi-stack"><div><span>HERSTELLER</span><b>${esc(s.filament_vendor)}</b></div><div><span>MATERIAL</span><b>${esc(s.filament_type)}</b></div><div><span>MAX FLOW</span><b>${sp.max_volumetric??'--'} mm3/s</b></div><div><span>AMS SLOT</span><b>${esc(a.active_slot)}</b></div></article></div><div class="panel-grid three">${panel('FILAMENT',dl([['Profil',s.filament_profile],['Dichte',`${s.density??'--'} g/cm3`],['Durchmesser',`${s.diameter??'--'} mm`],['Verbrauch',`${Number(s.filament_g||0).toFixed(2)} g`]]))}${panel('DRUCKGESCHWINDIGKEIT',dl([['Aussenwand',`${sp.outer_wall??'--'} mm/s`],['Innenwand',`${sp.inner_wall??'--'} mm/s`],['Infill',`${sp.infill??'--'} mm/s`],['Travel',`${sp.travel??'--'} mm/s`]]))}${panel('PROZESS',dl([['Layerhoehe',`${s.layer_height??'--'} mm`],['Infill',`${s.infill_percent??'--'}% ${s.infill_pattern||''}`],['Waende',s.wall_loops],['Bett',s.bed_type]]))}</div>`}
+if(view==='ams'){h=head('AMS 2 PRO','MATERIALSYSTEM / HUMIDITY / DRYING')+`<div class="subhero"><article class="panel"><div class="panel-title">AMS 2 PRO</div><img class="hero-photo" src="assets/bambu-official/p2s-11.jpg"></article><article class="panel kpi-stack"><div><span>AKTIVER SLOT</span><b>${esc(a.active_slot)}</b></div><div><span>MATERIAL</span><b>${esc(a.material)}</b></div><div><span>TEMPERATUR</span><b>${a.temp_c??'--'} C</b></div><div><span>FEUCHTE RAW</span><b>${a.humidity_raw??'--'}</b></div></article></div><div class="panel-grid three">${panel('STATUS',dl([['Unit',a.unit],['Humidity Level',a.humidity_level],['Remaining',a.remain],['RFID',a.tag_uid_present?'erkannt':'nicht gemeldet']]))}${panel('TROCKNUNG',dl([['Status',a.drying?'AKTIV':'AUS'],['Dry Time',a.dry_time],['Slot',a.active_slot]]))}${panel('SICHERHEIT',`<div class="notice"><strong>RFID/UID</strong><br>Roh-UIDs werden nicht ins Web uebertragen. Die Oberflaeche zeigt nur, ob eine UID vorhanden ist.</div>`)}</div>`}
+if(view==='stats'){const hms=Number(l.hms_count||0)>0?`${l.hms_count} Meldung(en)`:'keine';h=head('STATISTIKEN','COLLECTOR / SQLITE / MASCHINENDATEN')+`<div class="panel-grid four"><div class="stats-card"><span>TELEMETRIE-SAMPLES</span><b>${st.samples||d.sample_count||0}</b></div><div class="stats-card"><span>DUESE AVG</span><b>${Number(st.nozzle_avg||0).toFixed(1)} C</b></div><div class="stats-card"><span>BETT AVG</span><b>${Number(st.bed_avg||0).toFixed(1)} C</b></div><div class="stats-card"><span>MAX FORTSCHRITT</span><b>${Number(st.progress_max||0).toFixed(0)}%</b></div></div><div class="panel-grid two">${panel('SPEED / FLOW',dl([['Speed Level',l.speed_level],['Speed Multiplier',`${l.speed_mag??'--'}%`],['Outer',`${sp.outer_wall??'--'} mm/s`],['Inner',`${sp.inner_wall??'--'} mm/s`],['Infill',`${sp.infill??'--'} mm/s`],['Travel',`${sp.travel??'--'} mm/s`],['Max Flow',`${sp.max_volumetric??'--'} mm3/s`]]))}${panel('FEHLER / HMS',dl([['Print Error',l.print_error],['Fail Reason',l.fail_reason],['HMS Daten',hms],['Stage',l.print_stage],['Substage',l.print_sub_stage]]))}</div>`}
+if(view==='costs'){h=head('KOSTEN','AKTUELLER SLICER-JOB / KOMPAKT KALKULIERT')+`<div class="cost-big"><div class="cost-list"><div><span>Filament</span><b>${euro(COST.mat)}</b></div><div><span>Strom</span><b>${euro(COST.power)}</b></div><div><span>Maschinenzeit</span><b>${euro(COST.machine)}</b></div><div><span>Selbstkosten</span><b>${euro(COST.self)}</b></div><div><span>Marge</span><b>${euro(COST.margin)}</b></div></div><div class="cost-total"><span>VERKAUFSPREIS</span><b>${euro(COST.total)}</b></div></div><div class="panel-grid two">${panel('JOBBASIS',dl([['Druckzeit',dur(s.total_time_sec)],['Filament',`${Number(s.filament_g||0).toFixed(2)} g`],['Material',`${s.filament_vendor||''} ${s.filament_type||''}`]]))}${panel('HINWEIS',`<div class="notice">Strom ist derzeit ein <strong>berechneter Wert</strong>. Fuer echte kWh benoetigen wir einen Leistungsmesser/Smart-Plug.</div>`)}</div>`}
+if(view==='projects'){h=head('PROJEKTE','ECHTE 3MF / DRUCKPLATTEN')+`<div class="project-grid"><article class="project-card"><img src="assets/lst-clips.png"><div><h3>428er LST Clips</h3><p>P2S / KINGROON HS-PLA</p><a href="LST-Clips/P2S-KINGROON-HS-PLA/LST_428_P2S_KINGROON_HS_PLA.3mf">3MF OEFFNEN</a></div></article><article class="project-card"><img src="assets/lst-klammer.png"><div><h3>24er LST Klammer</h3><p>P2S Druckplatte</p><a href="LST-Klammer/">PROJEKT OEFFNEN</a></div></article><article class="project-card"><img src="assets/bambu-official/p2s-9.jpg"><div><h3>Individuelle Teile</h3><p>DEZENDER / Additive Systems</p><a href="#overview">ZUR UEBERSICHT</a></div></article></div>`}
+host.innerHTML=`<div class="subview-shell">${h}</div>`;const titles={overview:['BAMBU LAB P2S','PROFESSIONAL ADDITIVE MANUFACTURING'],live:['LIVE DRUCK','P2S / LAN ONLY / DEVELOPER MODE'],history:['HISTORIE','DRUCKJOBS UND TELEMETRIE'],material:['MATERIAL','FILAMENT UND PROZESSDATEN'],ams:['AMS 2 PRO','MATERIALSYSTEM'],stats:['STATISTIKEN','COLLECTOR UND MASCHINENDATEN'],costs:['KOSTEN','DRUCKKOSTEN UND KALKULATION'],projects:['PROJEKTE','3MF UND PRODUKTIONSPLATTEN']};txt('pageTitle',titles[view]?.[0]||'BAMBU LAB P2S');txt('pageSub',titles[view]?.[1]||'')}
+function activate(view,push=true){document.body.dataset.view=view;document.querySelectorAll('#mainNav a').forEach(a=>a.classList.toggle('active',a.dataset.view===view));$('overviewView').classList.toggle('active',view==='overview');$('subview').classList.toggle('active',view!=='overview');if(view!=='overview')renderView(view,DATA);else{txt('pageTitle','BAMBU LAB P2S');txt('pageSub','PROFESSIONAL ADDITIVE MANUFACTURING')}if(push)history.replaceState(null,'',`#${view}`)}
+document.querySelectorAll('#mainNav a').forEach(a=>a.addEventListener('click',()=>activate(a.dataset.view)));['priceKg','powerPrice','machineRate','margin'].forEach(id=>$(id)?.addEventListener('input',()=>{calc(DATA);if(document.body.dataset.view==='costs')renderView('costs',DATA)}));setInterval(()=>txt('clock',new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})),1000);window.addEventListener('DOMContentLoaded',()=>activate((location.hash||'#overview').slice(1),false));load().catch(console.error);setInterval(()=>load().catch(console.error),5000);

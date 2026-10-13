@@ -40,7 +40,7 @@ def main():
         ok = not getattr(reason, 'is_failure', False)
         state['connected'] = ok
         if ok:
-            c.subscribe(topic_report)
+            c.subscribe(f'device/{serial}/#')
             c.publish(topic_req, json.dumps({'pushing': {'sequence_id': '0', 'command': 'pushall'}}))
             print('[PRINTBENCH] MQTT connected', flush=True)
         else:
@@ -54,15 +54,18 @@ def main():
     def on_message(c, u, m):
         try:
             raw = json.loads(m.payload.decode('utf-8', 'ignore'))
-            n = collector.save_report(db, raw)
-            state['messages'] += 1
-            if state['messages'] % 12 == 1:
-                print('[PRINTBENCH] LIVE ' + json.dumps({
-                    'state': n.get('print_state'), 'progress': n.get('progress'),
-                    'layer': [n.get('layer_current'), n.get('layer_total')],
-                    'remaining_min': n.get('remaining_min'), 'nozzle_c': n.get('nozzle_c'),
-                    'bed_c': n.get('bed_c')
-                }, ensure_ascii=False), flush=True)
+            collector.save_raw_mqtt(db, m.topic, raw)
+            p = raw.get('print') if isinstance(raw, dict) else None
+            if isinstance(p, dict) and any(k in p for k in ('gcode_state','mc_percent','nozzle_temper','bed_temper','spd_mag','ams')):
+                n = collector.save_report(db, raw)
+                state['messages'] += 1
+                if state['messages'] % 12 == 1:
+                    print('[PRINTBENCH] LIVE ' + json.dumps({
+                        'state': n.get('print_state'), 'progress': n.get('progress'),
+                        'layer': [n.get('layer_current'), n.get('layer_total')],
+                        'remaining_min': n.get('remaining_min'), 'nozzle_c': n.get('nozzle_c'),
+                        'bed_c': n.get('bed_c')
+                    }, ensure_ascii=False), flush=True)
         except Exception as e:
             db.execute('INSERT INTO events(ts,kind,payload) VALUES(?,?,?)',
                        (collector.now_iso(), 'mqtt_parse_error', json.dumps({'error': str(e)})))

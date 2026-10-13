@@ -45,7 +45,22 @@ def db_open():
     );
     CREATE INDEX IF NOT EXISTS idx_telemetry_ts ON telemetry(ts);
     CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, ts TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS mqtt_raw(
+      id INTEGER PRIMARY KEY, ts TEXT NOT NULL, topic TEXT NOT NULL,
+      command TEXT, payload TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_mqtt_raw_ts ON mqtt_raw(ts);
+    CREATE INDEX IF NOT EXISTS idx_mqtt_raw_command ON mqtt_raw(command);
     ''')
+    cols={r[1] for r in db.execute('PRAGMA table_info(telemetry)').fetchall()}
+    migrations={
+      'speed_mag':'REAL','fan_part':'REAL','fan_aux':'REAL','fan_chamber':'REAL','fan_heatbreak':'REAL',
+      'print_stage':'TEXT','print_sub_stage':'TEXT','ipcam_json':'TEXT','hms_json':'TEXT',
+      'print_error':'TEXT','fail_reason':'TEXT'
+    }
+    for name,typ in migrations.items():
+        if name not in cols:
+            db.execute(f'ALTER TABLE telemetry ADD COLUMN {name} {typ}')
     db.commit()
     return db
 
@@ -141,14 +156,33 @@ def normalize_report(msg):
       'nozzle_c': pick(p,'nozzle_temper'), 'nozzle_target_c': pick(p,'nozzle_target_temper'),
       'bed_c': pick(p,'bed_temper'), 'bed_target_c': pick(p,'bed_target_temper'),
       'chamber_c': pick(p,'chamber_temper'), 'wifi_rssi': pick(p,'wifi_signal'),
-      'speed_level': pick(p,'spd_lvl'), 'ams': ams
+      'speed_level': pick(p,'spd_lvl'), 'speed_mag': pick(p,'spd_mag'),
+      'fan_part': pick(p,'cooling_fan_speed'), 'fan_aux': pick(p,'big_fan1_speed'),
+      'fan_chamber': pick(p,'big_fan2_speed'), 'fan_heatbreak': pick(p,'heatbreak_fan_speed'),
+      'print_stage': pick(p,'mc_print_stage'), 'print_sub_stage': pick(p,'mc_print_sub_stage'),
+      'ipcam': pick(p,'ipcam'), 'hms': pick(p,'hms'), 'print_error': pick(p,'print_error'),
+      'fail_reason': pick(p,'fail_reason'), 'ams': ams
     }
 
 
+def _mqtt_command(raw):
+    if not isinstance(raw, dict): return None
+    for section in ('print','pushing','info','system'):
+        obj = raw.get(section)
+        if isinstance(obj, dict) and obj.get('command') is not None:
+            return str(obj.get('command'))
+    if raw.get('command') is not None:
+        return str(raw.get('command'))
+    return None
+
+def save_raw_mqtt(db, topic, raw):
+    db.execute('INSERT INTO mqtt_raw(ts,topic,command,payload) VALUES(?,?,?,?)', (now_iso(), str(topic), _mqtt_command(raw), json.dumps(raw,ensure_ascii=False)))
+    db.commit()
+
 def save_report(db, raw):
     n=normalize_report(raw)
-    db.execute('''INSERT INTO telemetry(ts,print_state,progress,remaining_min,layer_current,layer_total,nozzle_c,nozzle_target_c,bed_c,bed_target_c,chamber_c,wifi_rssi,speed_level,ams_json,raw_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-      (n['ts'],n['print_state'],n['progress'],n['remaining_min'],n['layer_current'],n['layer_total'],n['nozzle_c'],n['nozzle_target_c'],n['bed_c'],n['bed_target_c'],n['chamber_c'],n['wifi_rssi'],str(n['speed_level']) if n['speed_level'] is not None else None,json.dumps(n['ams'],ensure_ascii=False),json.dumps(raw,ensure_ascii=False)))
+    db.execute('''INSERT INTO telemetry(ts,print_state,progress,remaining_min,layer_current,layer_total,nozzle_c,nozzle_target_c,bed_c,bed_target_c,chamber_c,wifi_rssi,speed_level,ams_json,raw_json,speed_mag,fan_part,fan_aux,fan_chamber,fan_heatbreak,print_stage,print_sub_stage,ipcam_json,hms_json,print_error,fail_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+      (n['ts'],n['print_state'],n['progress'],n['remaining_min'],n['layer_current'],n['layer_total'],n['nozzle_c'],n['nozzle_target_c'],n['bed_c'],n['bed_target_c'],n['chamber_c'],n['wifi_rssi'],str(n['speed_level']) if n['speed_level'] is not None else None,json.dumps(n['ams'],ensure_ascii=False),json.dumps(raw,ensure_ascii=False),n['speed_mag'],n['fan_part'],n['fan_aux'],n['fan_chamber'],n['fan_heatbreak'],str(n['print_stage']) if n['print_stage'] is not None else None,str(n['print_sub_stage']) if n['print_sub_stage'] is not None else None,json.dumps(n['ipcam'],ensure_ascii=False),json.dumps(n['hms'],ensure_ascii=False),str(n['print_error']) if n['print_error'] is not None else None,str(n['fail_reason']) if n['fail_reason'] is not None else None))
     db.commit(); return n
 
 
