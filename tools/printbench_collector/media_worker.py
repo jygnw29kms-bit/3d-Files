@@ -3,7 +3,7 @@ import json, posixpath, shlex, shutil, sqlite3, subprocess, threading, time
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
-import collector, server_transport
+import collector, server_transport, native_media
 
 ROOT=Path(__file__).resolve().parent
 MEDIA=ROOT/'media'; FRAMES=MEDIA/'timelapse_frames'; TOKEN_FILE=ROOT/'.push-token'
@@ -105,7 +105,7 @@ def finalize_timelapse():
     return None
 
 def run_forever(stop_event:threading.Event|None=None):
-    stop_event=stop_event or threading.Event(); proc=None; last_snap_push=0.; last_clip_mtime=0.; last_frame=0.; was_active=False; last_restart=0.
+    stop_event=stop_event or threading.Event(); proc=None; last_snap_push=0.; last_clip_mtime=0.; last_frame=0.; was_active=False; last_restart=0.; last_native_sync=0.
     while not stop_event.wait(1):
         now=time.time()
         if proc is None or proc.poll() is not None:
@@ -122,6 +122,11 @@ def run_forever(stop_event:threading.Event|None=None):
         if clip and clip.stat().st_mtime>last_clip_mtime:
             try:post_file(clip,'clip',timeout=60); last_clip_mtime=clip.stat().st_mtime; print('[PRINTBENCH] MEDIA clip pushed',flush=True)
             except Exception as e:print('[PRINTBENCH] MEDIA clip warning:',e,flush=True)
+        if now-last_native_sync>=300:
+            try:
+                info=native_media.sync_native(); print('[PRINTBENCH] NATIVE MEDIA '+json.dumps(info,ensure_ascii=False),flush=True); last_native_sync=now
+            except Exception as e:
+                if int(now)%60<2:print('[PRINTBENCH] NATIVE MEDIA warning:',e,flush=True)
         st=latest_state(); state=st.get('state',''); active=(state in ACTIVE_STATES) or (state not in STOP_STATES and (st.get('progress') or 0)>0 and (st.get('progress') or 0)<100)
         if active and now-last_frame>=15:
             try:add_timelapse_frame(snap); last_frame=now

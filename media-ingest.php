@@ -12,10 +12,18 @@ $kind = strtolower(trim((string)($_GET['kind'] ?? '')));
 $map = [
  'snapshot'=>['latest.jpg','image/jpeg',2000000],
  'clip'=>['live.mp4','video/mp4',50000000],
- 'timelapse'=>['timelapse-latest.mp4','video/mp4',200000000]
+ 'timelapse'=>['timelapse-latest.mp4','video/mp4',200000000],
+ 'native_video'=>[null,'video/mp4',200000000],
+ 'native_thumb'=>[null,'image/jpeg',3000000]
 ];
 if (!isset($map[$kind])) { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'kind']); exit; }
 [$name,$mime,$max] = $map[$kind];
+if ($kind === 'native_video' || $kind === 'native_thumb') {
+  $rawName = basename((string)($_GET['name'] ?? ''));
+  $pattern = $kind === 'native_video' ? '/^video_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.mp4$/' : '/^video_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}(?:_mini)?\.jpg$/';
+  if (!preg_match($pattern, $rawName)) { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'name']); exit; }
+  $name = 'native/' . $rawName;
+}
 $len = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
 if ($len <= 0 || $len > $max) { http_response_code(413); echo json_encode(['ok'=>false,'error'=>'size']); exit; }
 $ctype = strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? ''))[0]));
@@ -23,6 +31,7 @@ if ($ctype !== $mime) { http_response_code(415); echo json_encode(['ok'=>false,'
 $raw = file_get_contents('php://input');
 if ($raw === false || strlen($raw) !== $len) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'body']); exit; }
 $dir = __DIR__ . '/runtime/media';
+if (str_starts_with($name, 'native/')) { $nativeDir = $dir . '/native'; if (!is_dir($nativeDir) && !mkdir($nativeDir, 0750, true)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'storage']); exit; } }
 if (!is_dir($dir) && !mkdir($dir, 0750, true)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'storage']); exit; }
 $tmp = $dir . '/' . $name . '.tmp'; $dst = $dir . '/' . $name;
 if (file_put_contents($tmp, $raw, LOCK_EX) === false || !rename($tmp, $dst)) { @unlink($tmp); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'write']); exit; }
@@ -33,7 +42,7 @@ if ($kind === 'timelapse') {
 }
 $metaFile = $dir . '/meta.json'; $meta = [];
 if (is_file($metaFile)) { $m = json_decode((string)file_get_contents($metaFile), true); if (is_array($m)) $meta=$m; }
-$meta[$kind] = ['file'=>$name,'updated_at'=>gmdate(DATE_ATOM),'bytes'=>strlen($raw),'mime'=>$mime];
+if ($kind !== 'native_video' && $kind !== 'native_thumb') $meta[$kind] = ['file'=>$name,'updated_at'=>gmdate(DATE_ATOM),'bytes'=>strlen($raw),'mime'=>$mime];
 $meta['updated_at'] = gmdate(DATE_ATOM);
 file_put_contents($metaFile, json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT), LOCK_EX); @chmod($metaFile,0644);
 echo json_encode(['ok'=>true,'kind'=>$kind,'bytes'=>strlen($raw),'updated_at'=>$meta[$kind]['updated_at']]);
