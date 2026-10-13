@@ -20,3 +20,12 @@ Geschlossene, konsistent orientierte Geometrie, Manifold-Status, Abstände und 3
 ### Herkunft
 
 Remix des Modells **LST helper (low stress training for plants)** von **extrawitz**, aus der vom Nutzer bereitgestellten Datei `LST-Klammer.3mf`. Das ursprüngliche 3MF nennt die Lizenz **Standard Digital File License**. Es wird keine zusätzliche Lizenz für das Originalmodell erteilt; die ursprünglichen Lizenzbedingungen gelten weiterhin. Die ursprünglichen Designer- und Lizenzangaben bleiben im 3MF erhalten.
+
+## LST-Clips: volle Platte für P2S und KINGROON HS-PLA
+
+- [428 Clips: Druckplatte als 3MF](LST-Clips/P2S-KINGROON-HS-PLA/LST_428_P2S_KINGROON_HS_PLA.3mf)
+- [Passprobe mit sechs Clips](LST-Clips/P2S-KINGROON-HS-PLA/LST_Passprobe_6_P2S_KINGROON_HS_PLA.3mf)
+- [Komplettes Download-Paket als ZIP](LST-Clips/P2S-KINGROON-HS-PLA/P2S_KINGROON_LST_Druckpaket.zip)
+- [Beschreibung, Vorschau und Druckhinweise](LST-Clips/P2S-KINGROON-HS-PLA/README.md)
+
+Für P2S mit 0,4-mm-Standarddüse und KINGROON HS-PLA; erfolgreich gesliced, geschätzt 5 h 32 min und 72 g PLA. Physische Druckqualität und Passform müssen mit der Passprobe geprüft werden.
