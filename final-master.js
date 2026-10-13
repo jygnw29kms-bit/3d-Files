@@ -166,3 +166,10 @@ document.querySelectorAll('.sidebar nav a').forEach((a) => {
 setInterval(() => setText('clock', new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })), 1000);
 load().catch(console.error);
 setInterval(() => load().catch(console.error), 5000);
+
+function activateInitialView(){
+  const requested=(location.hash||'#uebersicht').slice(1);
+  const link=[...document.querySelectorAll('.sidebar nav a')].find(a=>a.dataset.view===requested);
+  if(link && requested!=='uebersicht') link.click();
+}
+window.addEventListener('DOMContentLoaded',activateInitialView);
