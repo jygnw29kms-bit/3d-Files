@@ -3,80 +3,126 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DEZENDER // PRINTBENCH Telemetry Preview</title>
+<title>DEZENDER // 3D-Druck Werkbank</title>
+<meta name="description" content="Technische 3D-Druck Werkbank mit P2S Live-Telemetrie, AMS 2 Pro, Projektdateien und kompakter Kostenkalkulation.">
 <link rel="stylesheet" href="preview.css">
 </head>
 <body>
-<div class="grid-bg"></div>
-<header class="topbar">
-  <div class="brand"><span class="brand-mark"></span><strong>DEZENDER</strong><i>/ PRINTBENCH</i></div>
-  <nav><a class="active" href="#live">LIVE</a><a href="#history">VERLAUF</a><a href="#ams">AMS</a><a href="#job">JOB</a></nav>
-  <div class="connection"><span class="pulse"></span><b id="connText">COLLECTOR LIVE</b></div>
+<header class="bar">
+  <div class="brand"><b>DEZENDER</b><span>3D-DRUCK // WERKBANK</span></div>
+  <nav><a href="#live">LIVE</a><a href="#kosten">KOSTEN</a><a href="#projekte">PROJEKTE</a><a href="#daten">DATEN</a></nav>
+  <div class="barstate"><i></i><span id="connectionText">COLLECTOR ONLINE</span></div>
 </header>
+
 <main>
-<section class="hero" id="live">
-  <div class="hero-copy">
-    <p class="eyebrow">P2S // LIVE PRODUCTION TELEMETRY</p>
-    <h1>PRINT<br><span>CONTROL</span></h1>
-    <p class="intro">Klipper-artige Produktionsansicht für Bambu Lab P2S + AMS 2 Pro. Alle Werte dieser Vorschau stammen aus dem bereits laufenden PRINTBENCH Collector.</p>
-    <div class="jobline"><span id="stateBadge">RUNNING</span><b id="jobName">Aktiver Druckjob</b><small id="updatedAt">—</small></div>
-  </div>
-  <div class="progress-shell">
-    <div class="ring" id="progressRing"><div><b id="progressValue">—</b><span>FORTSCHRITT</span></div></div>
-    <div class="progress-meta"><div><span>LAYER</span><b id="layerValue">—</b></div><div><span>RESTZEIT</span><b id="remainValue">—</b></div><div><span>SPEED</span><b id="speedValue">—</b></div></div>
-  </div>
+<section class="workgrid" id="live">
+  <article class="machinepanel">
+    <div class="panelhead"><span>P2S // AKTUELLER DRUCK</span><b id="jobName">—</b></div>
+    <div class="machinebody">
+      <div class="printvisual">
+        <img src="assets/lst-clips.png" alt="Aktuelle P2S Druckplatte">
+        <div class="visualhud">
+          <span id="printState">—</span>
+          <strong id="progressBig">—%</strong>
+          <small id="layerText">Layer — / —</small>
+        </div>
+      </div>
+      <div class="readouts">
+        <div><span>RESTZEIT</span><strong id="remaining">—</strong></div>
+        <div><span>DÜSE</span><strong id="nozzle">—</strong><small id="nozzleTarget">Soll —</small></div>
+        <div><span>BETT</span><strong id="bed">—</strong><small id="bedTarget">Soll —</small></div>
+        <div><span>WLAN</span><strong id="wifi">—</strong></div>
+        <div><span>SPEED</span><strong id="speed">—</strong></div>
+        <div><span>SAMPLES</span><strong id="samples">—</strong></div>
+      </div>
+    </div>
+    <div class="progressrail"><i id="progressBar"></i></div>
+  </article>
+
+  <aside class="costpanel" id="kosten">
+    <div class="panelhead"><span>KALKULATION // KOMPAKT</span><b id="calcStatus">LIVE-DATEN</b></div>
+    <div class="calcgrid">
+      <label>Filament €/kg<input id="cPriceKg" type="number" value="18.99" min="0" step="0.01"></label>
+      <label>Strom €/kWh<input id="cPowerPrice" type="number" value="0.40" min="0" step="0.01"></label>
+      <label>Maschine €/h<input id="cMachine" type="number" value="0.65" min="0" step="0.05"></label>
+      <label>Marge %<input id="cMargin" type="number" value="20" min="0" step="1"></label>
+      <label>Ø Leistung W<input id="cWatts" type="number" value="200" min="0" step="10"></label>
+      <label>AMS Dry h<input id="cAmsHours" type="number" value="0" min="0" step="0.25"></label>
+    </div>
+    <details>
+      <summary>ERWEITERT</summary>
+      <div class="calcgrid compact">
+        <label>Vorbereitung €<input id="cPrep" type="number" value="2.50" min="0" step="0.10"></label>
+        <label>Ausschuss %<input id="cWaste" type="number" value="5" min="0" step="1"></label>
+        <label>AMS Dry W<input id="cAmsWatts" type="number" value="80" min="0" step="5"></label>
+      </div>
+    </details>
+    <div class="calcout">
+      <div><span>Material</span><b id="oMaterial">—</b></div>
+      <div><span>Strom</span><b id="oPower">—</b></div>
+      <div><span>Maschine</span><b id="oMachine">—</b></div>
+      <div><span>AMS</span><b id="oAms">—</b></div>
+      <div class="sum"><span>KALKULIERT</span><strong id="oTotal">—</strong></div>
+    </div>
+    <p class="calcsource" id="calcSource">wartet auf Slicer-Daten …</p>
+  </aside>
 </section>
 
-<section class="metric-strip">
-  <article><span>NOZZLE</span><b id="nozzleValue">—</b><small id="nozzleTarget">Target —</small></article>
-  <article><span>BED</span><b id="bedValue">—</b><small id="bedTarget">Target —</small></article>
-  <article><span>WLAN</span><b id="wifiValue">—</b><small>MQTT / LAN</small></article>
-  <article><span>TELEMETRIE</span><b id="sampleValue">—</b><small>SQLite Samples</small></article>
-</section>
-
-<section class="panel-grid" id="history">
-  <article class="panel wide">
-    <header><div><p>01 / THERMAL HISTORY</p><h2>Temperaturverlauf</h2></div><div class="legend"><span class="blue">NOZZLE</span><span class="orange">BED</span></div></header>
-    <canvas id="tempChart"></canvas>
-    <footer><span>Quelle: P2S MQTT</span><span id="historyRange">—</span></footer>
+<section class="datagrid" id="daten">
+  <article class="chartpanel wide">
+    <div class="panelhead"><span>TEMPERATURVERLAUF</span><b>P2S MQTT</b></div>
+    <canvas id="tempChart" width="1200" height="280"></canvas>
+    <div class="legend"><span><i class="l-nozzle"></i>Düse</span><span><i class="l-bed"></i>Bett</span></div>
   </article>
-  <article class="panel">
-    <header><div><p>02 / BUILD PROGRESS</p><h2>Layer & Fortschritt</h2></div></header>
-    <div class="layer-visual"><div class="build"><div id="buildFill"></div><i></i></div><div class="layer-stats"><strong id="layerBig">—</strong><span>aktueller Layer</span><b id="layerPct">—</b><small>des Layer-Stacks</small></div></div>
+  <article class="amspanel">
+    <div class="panelhead"><span>AMS 2 PRO</span><b id="amsUnit">UNIT —</b></div>
+    <div class="amsring"><strong id="amsSlot">—</strong><span>AKTIVER SLOT</span></div>
+    <dl>
+      <div><dt>Material</dt><dd id="amsMaterial">—</dd></div>
+      <div><dt>Temperatur</dt><dd id="amsTemp">—</dd></div>
+      <div><dt>Feuchte</dt><dd id="amsHumidity">—</dd></div>
+      <div><dt>Trocknung</dt><dd id="amsDry">—</dd></div>
+      <div><dt>RFID</dt><dd id="amsRfid">—</dd></div>
+    </dl>
   </article>
-  <article class="panel" id="ams">
-    <header><div><p>03 / MATERIAL SYSTEM</p><h2>AMS 2 Pro</h2></div><span class="status-dot"></span></header>
-    <div class="ams-box">
-      <div class="spool"><div class="spool-core"></div><span id="spoolMaterial">PLA</span></div>
-      <dl>
-        <div><dt>AKTIVER SLOT</dt><dd id="amsSlot">—</dd></div>
-        <div><dt>TEMP.</dt><dd id="amsTemp">—</dd></div>
-        <div><dt>FEUCHTE RAW</dt><dd id="amsHumidity">—</dd></div>
-        <div><dt>RFID</dt><dd id="amsRfid">—</dd></div>
-      </dl>
+  <article class="slicerpanel">
+    <div class="panelhead"><span>SLICER / SOLL-DATEN</span><b id="slicerName">—</b></div>
+    <div class="specmatrix">
+      <div><span>Profil</span><b id="sProfile">—</b></div>
+      <div><span>Hersteller</span><b id="sVendor">—</b></div>
+      <div><span>Material</span><b id="sMaterial">—</b></div>
+      <div><span>Filament</span><b id="sFilament">—</b></div>
+      <div><span>Zeit</span><b id="sTime">—</b></div>
+      <div><span>Layer</span><b id="sLayers">—</b></div>
+      <div><span>Layerhöhe</span><b id="sLayerHeight">—</b></div>
+      <div><span>Infill</span><b id="sInfill">—</b></div>
+      <div><span>Wände</span><b id="sWalls">—</b></div>
+      <div><span>Düse</span><b id="sNozzle">—</b></div>
+      <div><span>Platte</span><b id="sBed">—</b></div>
     </div>
   </article>
 </section>
 
-<section class="panel job-panel" id="job">
-  <header><div><p>04 / SLICER DATASET</p><h2>Aktueller Produktionsjob</h2></div><span class="data-badge">BAMBU STUDIO + MQTT</span></header>
-  <div class="job-grid">
-    <div class="job-title"><small>PROFIL</small><strong id="profileValue">—</strong><span id="vendorValue">—</span></div>
-    <dl class="specs">
-      <div><dt>MODELLZEIT</dt><dd id="modelTime">—</dd></div><div><dt>GESAMTZEIT</dt><dd id="totalTime">—</dd></div>
-      <div><dt>FILAMENT</dt><dd id="filamentG">—</dd></div><div><dt>LÄNGE</dt><dd id="filamentM">—</dd></div>
-      <div><dt>LAYERHÖHE</dt><dd id="layerHeight">—</dd></div><div><dt>INFILL</dt><dd id="infillValue">—</dd></div>
-      <div><dt>WÄNDE</dt><dd id="wallsValue">—</dd></div><div><dt>LAYER TOTAL</dt><dd id="layersTotal">—</dd></div>
-    </dl>
+<section class="projects" id="projekte">
+  <div class="sectionline"><h2>DRUCKDATEIEN / PRODUKTION</h2><p>reale Projektdateien aus dem Repository</p></div>
+  <div class="projectgrid">
+    <article class="project">
+      <img src="assets/lst-clips.png" alt="428 LST Clips Druckplatte">
+      <div><span>LST // SERIENPLATTE</span><h3>428 LST-Clips</h3><p>KINGROON HS‑PLA · P2S · 0,24 mm · 3 Wandlinien · 15 % Gyroid</p><b>3MF / P2S READY</b></div>
+    </article>
+    <article class="project">
+      <img src="assets/lst-klammer.png" alt="24 LST Klammern Druckplatte">
+      <div><span>LST // KLAMMER</span><h3>24 × LST-Klammer</h3><p>Bambu Lab P2S · Schenkel 4 mm · komplette 256-mm-Platte</p><b>STL + 3MF + PRÜFBERICHT</b></div>
+    </article>
   </div>
 </section>
 
-<section class="architecture">
-  <p>UMSETZBARE DATENKETTE</p>
-  <div><span>P2S + AMS 2 PRO</span><i>→</i><span>MQTT TLS :8883</span><i>→</i><span>PRINTBENCH COLLECTOR</span><i>→</i><span>SQLITE</span><i>→</i><span>HTTPS API</span><i>→</i><span>DEZENDER.DE</span></div>
+<section class="pipeline">
+  <b>DATENWEG</b><span>P2S</span><i>→</i><span>LAN MQTT/TLS</span><i>→</i><span>PRINTBENCH COLLECTOR</span><i>→</i><span>SQLite</span><i>→</i><span>HTTPS API</span><i>→</i><span>dezender.de/3d-druck</span>
 </section>
 </main>
-<footer class="footer"><span>DEZENDER // PRINTBENCH TELEMETRY</span><span>PREVIEW AUF REALER COLLECTOR-DATENSTRUKTUR</span></footer>
+
+<footer><span>DEZENDER // 3D-DRUCK</span><span>ECHTE P2S + AMS + SLICER DATEN</span><span id="updated">—</span></footer>
 <script src="preview.js"></script>
 </body>
 </html>
