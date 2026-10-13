@@ -16,7 +16,7 @@ def push_once(timeout=8):
     export_preview.main()
     payload = json.loads(DATA_FILE.read_text(encoding='utf-8'))
     token = TOKEN_FILE.read_text(encoding='utf-8').strip()
-    r = requests.post(URL, json=payload, headers={'Authorization': f'Bearer {token}', 'User-Agent': 'PRINTBENCH-Collector/1.0'}, timeout=timeout)
+    r = requests.post(URL, json=payload, headers={'X-PRINTBENCH-TOKEN': token, 'User-Agent': 'PRINTBENCH-Collector/1.0'}, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
