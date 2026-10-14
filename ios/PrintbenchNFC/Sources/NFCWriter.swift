@@ -26,7 +26,11 @@ final class NFCWriter: NSObject, ObservableObject {
         self.serverLinked = false
         self.status = "iPhone an den NTAG216 halten …"
 
-        let session = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
+        guard let session = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil) else {
+            self.isWriting = false
+            self.status = "NFC-Session konnte nicht gestartet werden."
+            return
+        }
         session.alertMessage = "PRINTBENCH: iPhone an den NTAG216 der Spule halten."
         self.session = session
         session.begin()
