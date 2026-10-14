@@ -24,3 +24,5 @@ public-live-media.png
 /tools/printbench_ssh_harden.ps1
 /tools/printbench_ssh_finalize.log
 /tools/ssh_vvv.*
+
+/tools/printbench_collector/.spool-admin-token

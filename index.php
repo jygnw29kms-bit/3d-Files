@@ -20,6 +20,7 @@
     <a data-view="stats"><i>06</i>STATISTIKEN</a>
     <a data-view="costs"><i>07</i>KOSTEN</a>
     <a data-view="projects"><i>08</i>PROJEKTE</a>
+    <a data-view="spools"><i>09</i>SPULEN</a>
   </nav>
   <div class="side-machine"><img src="assets/bambu-official/p2s-1.jpg"><b>Bambu Lab<br>P2S</b><small>mit AMS 2 Pro</small></div>
   <div class="system-list"><strong>SYSTEM</strong><span><i></i>Online</span><span><i></i>MQTT Verbunden</span><span><i></i>Collector Aktiv</span><span><i></i>Daten werden gespeichert</span></div>
@@ -72,5 +73,5 @@
 <div id="subview" class="view"></div>
 </main>
 </div>
-<script>window.LIVE_ENDPOINT='live-data.php';</script><script src="final-master.js"></script>
+<script>window.LIVE_ENDPOINT='live-data.php';</script><script src="assets/qrcode.min.js"></script><script src="spool-manager.js"></script><script src="final-master.js"></script>
 </body></html>
