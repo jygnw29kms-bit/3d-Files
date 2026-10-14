@@ -1,11 +1,19 @@
 from __future__ import annotations
-import json, posixpath, shlex, shutil, sqlite3, subprocess, threading, time
+import json, os, posixpath, shlex, shutil, sqlite3, subprocess, threading, time
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
 import collector, server_transport, native_media, session_tracker
 
 ROOT=Path(__file__).resolve().parent
+def _win_no_window_kwargs():
+    if os.name != 'nt':
+        return {}
+    flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0
+    return {'creationflags': flags, 'startupinfo': startupinfo}
 MEDIA=ROOT/'media'; FRAMES=MEDIA/'timelapse_frames'; TOKEN_FILE=ROOT/'.push-token'
 INGEST='https://www.dezender.de/3d-druck/media-ingest.php'
 ACTIVE_STATES={'RUNNING','PRINTING','PREPARE','SLICING','PAUSE','PAUSED'}
@@ -83,7 +91,7 @@ def start_ffmpeg():
     cmd=['ffmpeg','-hide_banner','-loglevel','warning','-rtsp_transport','tcp','-tls_verify','0','-i',url,
          '-map','0:v:0','-vf','fps=1/2','-q:v','3','-update','1','-y',str(snap),
          '-map','0:v:0','-an','-c:v','copy','-f','segment','-segment_time','30','-reset_timestamps','1','-segment_wrap','3','-segment_format','mp4',pattern]
-    return subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    return subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**_win_no_window_kwargs())
 
 def newest_closed_clip():
     fs=sorted(MEDIA.glob('live-*.mp4'),key=lambda p:p.stat().st_mtime,reverse=True); now=time.time()
@@ -111,7 +119,7 @@ def finalize_timelapse():
     if len(frames)<3:return None
     out=MEDIA/f'timelapse-{d.name}.mp4'
     cmd=['ffmpeg','-hide_banner','-loglevel','error','-framerate','12','-i',str(d/'frame-%06d.jpg'),'-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p','-movflags','+faststart','-y',str(out)]
-    r=subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=180)
+    r=subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=180,**_win_no_window_kwargs())
     if r.returncode==0 and out.exists() and out.stat().st_size>10000: post_file(out,'timelapse',timeout=120); return out
     return None
 
@@ -158,3 +166,4 @@ def run_forever(stop_event:threading.Event|None=None):
             except Exception:pass
 
 if __name__=='__main__':run_forever()
+
