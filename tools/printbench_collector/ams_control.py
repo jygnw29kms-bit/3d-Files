@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import json, ssl, threading, time
 from pathlib import Path
 from typing import Any
@@ -7,6 +7,7 @@ import collector
 
 ROOT=Path(__file__).resolve().parent
 CONFIG=ROOT/'ams_control.json'
+ALLOWED_COMMANDS={'ams_get_rfid','ams_filament_setting'}
 DEFAULT_IDS={
     'PLA':'GFL99','PETG':'GFG99','TPU':'GFU99','PVA':'GFS99','PLA-CF':'GFL98',
     'PC':'GFC99','PA':'GFN99','PA-CF':'GFN98','ASA':'GFB98','ABS':'GFB99'
@@ -58,6 +59,8 @@ def send(command:dict,apply=False,timeout=None):
     cfg=load_config(); payload=json.loads(json.dumps(command))
     if not apply:return {'ok':True,'dry_run':True,'payload':payload}
     command_name=str((payload.get('print') or {}).get('command',''))
+    if command_name not in ALLOWED_COMMANDS:
+        raise ValueError(f'unsupported AMS command: {command_name or "missing"}')
     if command_name!='ams_get_rfid' and not cfg.get('write_enabled',False):
         raise RuntimeError('AMS writes are disabled in ams_control.json')
     serial,code=collector.load_local_bambu_identity(); req=f'device/{serial}/request'; report=f'device/{serial}/report'
