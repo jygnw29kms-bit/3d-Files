@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'printbench.db'
 BAMBU_CONF = Path.home() / 'AppData' / 'Roaming' / 'BambuStudio' / 'BambuStudio.conf'
 BAMBU_TEMP = Path(os.environ.get('LOCALAPPDATA', '')) / 'Temp' / 'bamboo_model'
-P2S_HOST = '192.168.178.110'
+P2S_HOST = os.environ.get('PRINTBENCH_PRINTER_HOST', '192.168.178.110')
 
 
 def now_iso():
@@ -16,6 +16,16 @@ def now_iso():
 
 
 def load_local_bambu_identity():
+    # Server credentials come from a protected file, never from repository files.
+    credential_file = os.environ.get('PRINTBENCH_PRINTER_CREDENTIALS_FILE')
+    if credential_file:
+        data = json.loads(Path(credential_file).read_text(encoding='utf-8'))
+        serial, code = data.get('serial'), data.get('access_code')
+        if not isinstance(serial, str) or not serial or not isinstance(code, str) or not code:
+            raise RuntimeError('Invalid server printer credentials')
+        return serial, code
+    if os.name != 'nt':
+        raise RuntimeError('Server requires PRINTBENCH_PRINTER_CREDENTIALS_FILE')
     raw = BAMBU_CONF.read_text(encoding='utf-8', errors='ignore')
     data, _ = json.JSONDecoder().raw_decode(raw.lstrip())
     access = data.get('access_code') or {}

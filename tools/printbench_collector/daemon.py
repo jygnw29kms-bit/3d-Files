@@ -1,9 +1,8 @@
 from __future__ import annotations
-import json, signal, socket, ssl, threading, time
+import argparse, json, os, signal, socket, ssl, threading, time
 import paho.mqtt.client as mqtt
 import collector
 import push_live
-import media_worker
 import session_tracker
 
 STOP = threading.Event()
@@ -23,7 +22,20 @@ def acquire_singleton():
         return False
 
 
-def main():
+def start_media_worker(server_media=False):
+    if not server_media:
+        return None
+    if os.name == 'nt':
+        raise RuntimeError('Camera processing is server-only; do not enable it on Windows')
+    import media_worker
+    thread = threading.Thread(target=media_worker.run_forever, args=(STOP,), daemon=True, name='printbench-media')
+    thread.start()
+    return thread
+
+
+def main(server_media=False):
+    if server_media and os.name == 'nt':
+        raise RuntimeError('Camera processing is server-only')
     if not acquire_singleton():
         print('[PRINTBENCH] Collector already running; exiting', flush=True)
         return
@@ -91,9 +103,8 @@ def main():
     client.connect(collector.P2S_HOST, 8883, keepalive=30)
     client.loop_start()
     print('[PRINTBENCH] Collector started', flush=True)
-    media_thread = threading.Thread(target=media_worker.run_forever, args=(STOP,), daemon=True, name='printbench-media')
-    media_thread.start()
-    print('[PRINTBENCH] Media worker started', flush=True)
+    media_thread = start_media_worker(server_media)
+    print('[PRINTBENCH] Server camera worker enabled' if media_thread else '[PRINTBENCH] Telemetry only; no local camera processing', flush=True)
 
     last_slice = 0.0
     last_push = 0.0
@@ -126,4 +137,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--server-media', action='store_true', help='Linux/Pi only: enable on-demand media processing')
+    main(server_media=parser.parse_args().server_media)
