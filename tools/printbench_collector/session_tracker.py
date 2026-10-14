@@ -49,12 +49,24 @@ def ensure_schema(db):
       fail_reason TEXT,
       media_key TEXT,
       slicer_json TEXT,
+      final_image TEXT,
       FOREIGN KEY(slicer_job_id) REFERENCES slicer_jobs(id)
     );
     CREATE INDEX IF NOT EXISTS idx_print_sessions_started ON print_sessions(started_at);
     CREATE INDEX IF NOT EXISTS idx_print_sessions_state ON print_sessions(state);
     ''')
+    cols={r[1] for r in db.execute('PRAGMA table_info(print_sessions)').fetchall()}
+    if 'final_image' not in cols:
+        db.execute('ALTER TABLE print_sessions ADD COLUMN final_image TEXT')
     db.commit()
+
+
+def attach_final_image(db, image_name):
+    ensure_schema(db)
+    row=db.execute("SELECT id FROM print_sessions WHERE outcome='success' ORDER BY id DESC LIMIT 1").fetchone()
+    if not row:return None
+    db.execute('UPDATE print_sessions SET final_image=? WHERE id=?',(str(image_name),row[0]))
+    db.commit(); return row[0]
 
 
 def _latest_slicer(db):
@@ -139,7 +151,6 @@ def _update(db, session, report):
 
 
 def observe(db, report):
-    """Observe one normalized MQTT report and maintain a durable print session."""
     ensure_schema(db)
     state = _state(report.get('print_state'))
     progress = _num(report.get('progress'))
@@ -160,26 +171,19 @@ def observe(db, report):
     elif state in CANCEL_STATES:
         _finish(db, session, report, 'cancelled')
     elif state in IDLE_STATES and (session.get('max_progress') or 0) > 0:
-        # A return to IDLE without a 100% report is treated as interrupted.
         _finish(db, session, report, 'interrupted')
 
 
 def _num(v):
-    try:
-        return float(v) if v is not None else None
-    except (TypeError, ValueError):
-        return None
+    try:return float(v) if v is not None else None
+    except (TypeError, ValueError):return None
 
 
 def _int(v):
-    try:
-        return int(v) if v is not None else None
-    except (TypeError, ValueError):
-        return None
+    try:return int(v) if v is not None else None
+    except (TypeError, ValueError):return None
 
 
 def _parse_iso(v):
-    try:
-        return datetime.fromisoformat(str(v).replace('Z', '+00:00'))
-    except Exception:
-        return None
+    try:return datetime.fromisoformat(str(v).replace('Z', '+00:00'))
+    except Exception:return None
