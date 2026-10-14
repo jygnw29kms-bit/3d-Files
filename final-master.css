@@ -29,3 +29,5 @@ main{min-width:0;padding:0 14px 18px}.topbar{height:70px;display:grid;grid-templ
 
 .field-hint{display:block;margin-top:3px;color:#667780;font:700 7px ui-monospace,monospace;line-height:1.35}
 
+
+.claim-link{display:block;margin-top:7px;padding:8px;border:1px solid #3e4c54;color:#ff9a3d;text-decoration:none;font:800 8px ui-monospace,monospace}.claim-link:hover{border-color:#ff7900}

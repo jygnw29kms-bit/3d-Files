@@ -181,3 +181,26 @@ function pb_verify_claim(string $id,int $exp,string $nonce,string $sig): bool {
     $want=rtrim(strtr(base64_encode(hash_hmac('sha256',$msg,pb_secret(),true)),'+/','-_'),'=');
     return hash_equals($want,$sig);
 }
+function pb_normalize_uid(mixed $value): string {
+    $uid=strtoupper(preg_replace('/[^0-9A-F]/i','',(string)$value)??'');
+    if (!preg_match('/^[0-9A-F]{8,32}$/',$uid)) throw new InvalidArgumentException('uid');
+    return implode(':',str_split($uid,2));
+}
+
+function pb_bind_nfc_uid(string $id, mixed $uidValue, string $tagType='NTAG216'): array {
+    $formatted=pb_normalize_uid($uidValue);
+    $compact=str_replace(':','',$formatted);
+    $data=pb_load_spools(); $i=pb_find_index($data,$id);
+    if ($i<0) throw new OutOfBoundsException('not_found');
+    foreach($data['spools'] as $other) {
+        if (($other['id']??'')!==$id && strtoupper(str_replace(':','',(string)($other['nfc_uid']??'')))===$compact) {
+            throw new RuntimeException('uid_already_bound:'.($other['id']??''));
+        }
+    }
+    $s=$data['spools'][$i]; $existing=(string)($s['nfc_uid']??'');
+    if ($existing!=='' && strtoupper(str_replace(':','',$existing))!==$compact) throw new RuntimeException('spool_already_has_different_uid');
+    $s['nfc_uid']=$formatted; $s['nfc_tag_type']=pb_text($tagType,32);
+    $s['nfc_programmed_at']=gmdate(DATE_ATOM); $s['updated_at']=gmdate(DATE_ATOM);
+    $data['spools'][$i]=$s; pb_save_spools($data);
+    return $s;
+}

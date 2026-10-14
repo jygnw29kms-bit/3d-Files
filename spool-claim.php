@@ -19,20 +19,16 @@ try {
     }
     if (($_SERVER['REQUEST_METHOD']??'GET')!=='POST') pb_json_response(['ok'=>false,'error'=>'method'],405);
     $body=pb_body();
-    $uid=strtoupper(preg_replace('/[^0-9A-F]/i','',(string)($body['uid']??''))??'');
-    if (!preg_match('/^[0-9A-F]{8,32}$/',$uid)) pb_json_response(['ok'=>false,'error'=>'uid'],422);
-    foreach($data['spools'] as $other) {
-        if (($other['id']??'')!==$id && strtoupper(str_replace(':','',(string)($other['nfc_uid']??'')))===$uid) pb_json_response(['ok'=>false,'error'=>'uid_already_bound','bound_to'=>$other['id']],409);
+    try { $s=pb_bind_nfc_uid($id,$body['uid']??'',pb_text($body['tagType']??'NTAG216',32)); }
+    catch(InvalidArgumentException $e){ pb_json_response(['ok'=>false,'error'=>'uid'],422); }
+    catch(OutOfBoundsException $e){ pb_json_response(['ok'=>false,'error'=>'not_found'],404); }
+    catch(RuntimeException $e){
+        $msg=$e->getMessage();
+        if (str_starts_with($msg,'uid_already_bound:')) pb_json_response(['ok'=>false,'error'=>'uid_already_bound','bound_to'=>substr($msg,18)],409);
+        if ($msg==='spool_already_has_different_uid') pb_json_response(['ok'=>false,'error'=>$msg],409);
+        throw $e;
     }
-    $formatted=implode(':',str_split($uid,2));
-    $existing=(string)($s['nfc_uid']??'');
-    if ($existing!=='' && strtoupper(str_replace(':','',$existing))!==$uid) pb_json_response(['ok'=>false,'error'=>'spool_already_has_different_uid'],409);
-    $s['nfc_uid']=$formatted;
-    $s['nfc_tag_type']=pb_text($body['tagType']??'NTAG216',32);
-    $s['nfc_programmed_at']=gmdate(DATE_ATOM);
-    $s['updated_at']=gmdate(DATE_ATOM);
-    $data['spools'][$i]=$s; pb_save_spools($data);
-    pb_json_response(['ok'=>true,'spool'=>pb_public_spool($s),'nfc_uid'=>$formatted]);
+    pb_json_response(['ok'=>true,'spool'=>pb_public_spool($s),'nfc_uid'=>$s['nfc_uid']]);
 } catch(Throwable $e) {
     error_log('PRINTBENCH spool-claim: '.$e->getMessage());
     pb_json_response(['ok'=>false,'error'=>'server'],500);

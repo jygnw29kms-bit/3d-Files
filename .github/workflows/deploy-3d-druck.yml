@@ -39,7 +39,7 @@ jobs:
       - name: Validate PHP
         run: |
           set -euo pipefail
-          for f in index.php api.php live-data.php ingest.php media-data.php media-ingest.php spool-lib.php spool-api.php spool-claim.php; do
+          for f in index.php api.php live-data.php ingest.php media-data.php media-ingest.php spool-lib.php spool-api.php spool-claim.php spool-write.php; do
             [ -f "$f" ] && php -l "$f"
           done
 
@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          for f in index.php index.html api.php final-master.css final-master.js spool-manager.js calculator-integrated.css live-data.php ingest.php media-data.php media-ingest.php spool-lib.php spool-api.php spool-claim.php site.css hightech.css site.js workbench.js; do
+          for f in index.php index.html api.php final-master.css final-master.js spool-manager.js calculator-integrated.css live-data.php ingest.php media-data.php media-ingest.php spool-lib.php spool-api.php spool-claim.php spool-write.php site.css hightech.css site.js workbench.js; do
             [ -f "$f" ] && cp "$f" dist/
           done
           cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips dist/

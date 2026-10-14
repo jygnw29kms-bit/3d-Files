@@ -64,3 +64,10 @@ Enable automatic signing for the iPhone development team and build to a physical
 
 ## Security direction
 The QR signature must be verified by the PRINTBENCH backend before a tag UID is bound to a spool. Do not put printer access credentials, MQTT credentials, API secrets, prices, customer data, or mutable inventory state on the NFC tag.
+
+
+## Signing / Core NFC caveat
+
+The unsigned IPA is reproducibly built in GitHub Actions and can be re-signed by Sideloadly/AltStore. However, Core NFC tag read/write uses the `com.apple.developer.nfc.readersession.formats` entitlement. Free Apple-ID provisioning may not grant custom NFC entitlements; a successful install alone does not prove NFC is available at runtime.
+
+PRINTBENCH therefore also supports a no-paid-account fallback: scan the signed spool QR with the normal iPhone camera, open the PRINTBENCH NFC fallback page, write the provided URL using the free NFC21 Tools App Store app, read/copy the NTAG UID there, and submit the UID back to the signed PRINTBENCH claim. The native companion remains the preferred one-step path where the NFC entitlement is available.
