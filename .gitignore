@@ -26,3 +26,5 @@ public-live-media.png
 /tools/ssh_vvv.*
 
 /tools/printbench_collector/.spool-admin-token
+
+/ios/PrintbenchNFC/dist/

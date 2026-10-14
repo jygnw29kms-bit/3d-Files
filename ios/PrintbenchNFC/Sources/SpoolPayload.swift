@@ -39,7 +39,7 @@ struct PrintbenchSpoolPayload: Codable, Equatable {
     }
 
     var canonicalURL: URL? {
-        URL(string: "https://www.dezender.de/3d-druck/spool/?spool=\(spoolId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? spoolId)")
+        URL(string: "https://www.dezender.de/3d-druck/index.php?spool=\(spoolId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? spoolId)#spools")
     }
 
     var claimEndpoint: URL? {
