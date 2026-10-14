@@ -65,3 +65,54 @@
 ## Shutdown/restart behavior
 - The live camera/media collector runs on the Windows PC. When the PC is off, the public site keeps the most recently uploaded snapshot/video/timelapses/final images but cannot receive new camera or MQTT data.
 - After Windows startup, start `tools/printbench_collector/daemon.py` again if autostart has not yet been configured.
+
+## 2026-10-14 — Spool Manager / NFC / AMS V2 engineering
+
+### Production state
+- PRINTBENCH web now has `09 SPULEN` with a real spool inventory and create flow.
+- Spool writes require a local admin token; public inventory is sanitized and never exposes NFC UID.
+- NFC onboarding QR uses a short-lived (15 min) HMAC-signed claim URL.
+- UID binding rejects duplicate UIDs and refuses silent rebinding to another physical tag.
+- Mutable spool data stays server-side; NTAG carries only stable PRINTBENCH identity data.
+- Spool database/claim secret prefer Plesk private storage outside the webroot; fallback runtime files are web-denied.
+- QR generation is bundled into `spool-manager.js`; no external QR service/runtime dependency.
+- Live smoke tests: index 200, spool list 200, unauthenticated admin 403, invalid claim 403, private runtime probe 403.
+
+### iOS companion
+- Native `PRINTBENCH NFC` companion uses Core NFC + camera QR scanner.
+- NTAG216 flow: scan signed QR -> write NDEF -> read back -> obtain physical UID -> POST UID to signed claim endpoint.
+- GitHub macOS CI builds an unsigned device IPA for Sideloadly/AltStore; no paid Apple Developer account required for build.
+- First compiler issue was fixed; CI run #2 succeeded and produced `PRINTBENCH-NFC-unsigned-IPA`.
+- Verified downloaded IPA SHA-256 against its generated checksum.
+- NFC tag's normal URL now opens PRINTBENCH directly at `index.php?spool=<ID>#spools`.
+
+### AMS V2 diagnostics
+- Added local-only `ams_rfid_observations` SQLite table plus `rfid_status.py`.
+- Recorder captures only AMS/RFID state changes locally; raw UID/tray UUID are never added to the public web payload.
+- Baseline on AMS 0 / slot 2: present=1, read_done=1, is_bambu=1, tray_info_idx=GFL99, material=PLA, while tag_uid/tray_uuid are still zero values.
+- This baseline is ready for the real NTAG216 insert/re-read experiment.
+
+### Print-session/media hardening
+- Explicit FAILED/CANCEL states now take precedence over 99.9/100% progress.
+- Synthetic tests passed: FAILED@100 -> failed; CANCEL@100 -> cancelled; FINISHED@100 -> success.
+- Final live-camera image is only linked to a fresh successful session without an image.
+- Final-image HTTPS failure has an SSH fallback.
+- Timelapse finalization is isolated from final-image errors and always gets its own completion attempt.
+- Completion state sets now cover FINISHED/COMPLETED/ERROR/CANCELLED/ABORTED/etc.
+
+### Relevant commits
+- `a0bdb6b` secure spool manager + NFC claim flow
+- `6a563d6` private spool storage + unsigned IPA CI
+- `34bce74` Core NFC build fix
+- `1594b50` bundle QR engine into spool manager
+- `848668e` local AMS RFID transition diagnostics
+- `ecaf642` harden print completion media/session outcomes
+- `fe881dc` stable NFC URL opens PRINTBENCH spool manager
+
+### Next real-hardware gate
+1. Create the first real spool in PRINTBENCH.
+2. Scan its generated QR with the companion and write one existing NTAG216 sticker.
+3. Verify server UID binding.
+4. Put that tagged spool in AMS 2 Pro and trigger/read normal AMS detection.
+5. Compare `tray_reading_bits`, `tray_read_done_bits`, `ams_rfid_status`, `tag_uid`, `tray_uuid` and slot state against the captured baseline.
+6. If AMS exposes the NTAG UID anywhere, wire automatic `UID -> spool -> AMS slot setting`; otherwise proceed to bus-level V2 capture.
