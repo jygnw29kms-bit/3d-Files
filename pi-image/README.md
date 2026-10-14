@@ -8,6 +8,7 @@ Custom Raspberry Pi OS Lite 64-bit image for the PRINTBENCH / DEZENDER 3D-printi
 
 Base: Raspberry Pi OS Lite 64-bit, image reference 2026-10-06.
 Target: Raspberry Pi 3 / 4 / 5 and Zero 2-class 64-bit boards supported by the upstream image.
+Storage: 8 GB minimum; 16 GB or larger recommended for logs, packages and future captures.
 
 ## First boot
 
@@ -31,7 +32,7 @@ Target: Raspberry Pi 3 / 4 / 5 and Zero 2-class 64-bit boards supported by the u
 ## PRINTBENCH software
 
 The boot partition contains a checksummed bootstrap archive of `tools/printbench_collector` from Git commit `c530ffa`.
-The first-boot script installs it under `/opt/printbench/repo/tools/printbench_collector`, creates `/opt/printbench/venv`, installs Python requirements and registers the collector as a systemd service.
+The first-boot script installs it under `/opt/printbench/repo/tools/printbench_collector`, creates `/opt/printbench/venv` with Debian system packages for paho-mqtt/watchdog/requests (pip only as fallback), and registers the collector as a systemd service.
 
 Useful commands after login:
 

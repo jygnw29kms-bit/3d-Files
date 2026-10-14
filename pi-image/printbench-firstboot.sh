@@ -137,9 +137,11 @@ EOF
 rm -rf /opt/printbench/repo
 mkdir -p /opt/printbench/repo
 tar -xzf "$BOOT_ARCHIVE" -C /opt/printbench/repo
-python3 -m venv /opt/printbench/venv
+python3 -m venv --system-site-packages /opt/printbench/venv
 /opt/printbench/venv/bin/python -m pip install --upgrade pip
-/opt/printbench/venv/bin/pip install -r /opt/printbench/repo/tools/printbench_collector/requirements.txt
+if ! /opt/printbench/venv/bin/python -c "import paho.mqtt.client, requests, watchdog"; then
+  /opt/printbench/venv/bin/pip install -r /opt/printbench/repo/tools/printbench_collector/requirements.txt
+fi
 chown -R printbench:printbench /opt/printbench/repo /var/lib/printbench
 
 cat >/usr/local/sbin/printbench-pair <<'EOF'
