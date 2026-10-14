@@ -1,4 +1,7 @@
-﻿import sqlite3
+﻿from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'printbench_collector'))
+import sqlite3
 import external_tag
 import spool_sync
 
@@ -13,3 +16,4 @@ def test_external_tag_match():
     assert out['matched'] is True and out['spool_id']=='S1'
     row=db.execute('SELECT uid,matched,spool_id FROM external_tag_observations').fetchone()
     assert row==('04:A1:B2:C3:D4:E5:F6',1,'S1')
+
