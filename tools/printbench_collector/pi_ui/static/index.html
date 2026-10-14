@@ -1,9 +1,96 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PRINTBENCH // P2S</title><link rel="stylesheet" href="app.css"></head><body>
-<div class="app"><aside><div class="brand"><span>PB</span><div><b>PRINTBENCH</b><small>P2S SYSTEM</small></div></div><nav><button data-view="overview" class="active">01 ÜBERSICHT</button><button data-view="ams">02 AMS 2 PRO</button><button data-view="spools">03 SPULEN / RFID</button><button data-view="prints">04 DRUCKE</button><button data-view="system">05 SYSTEM</button></nav><div class="machine"><b>BAMBU LAB P2S</b><small>AMS 2 Pro · LAN ONLY</small></div><div class="bridge"><i></i><span id="collectorSide">Collector wird geprüft…</span></div></aside>
-<main><header><div><small>PRINTBENCH LOCAL CONTROL</small><h1 id="pageTitle">P2S / AMS 2 PRO</h1></div><div class="headstat"><span id="onlineDot"></span><b id="onlineText">VERBINDE…</b><small id="age">–</small></div></header>
-<div class="view active" data-view-panel="overview"><section class="hero"><article class="panel state"><div class="label">DRUCKSTATUS</div><div class="bigrow"><strong id="state">–</strong><span id="progress">–%</span></div><div class="bar"><i id="progressBar"></i></div><div class="metrics"><div><small>LAYER</small><b id="layer">–</b></div><div><small>RESTZEIT</small><b id="remain">–</b></div><div><small>SPEED</small><b id="speed">–</b></div></div></article><article class="panel therm"><div class="label">THERMIK · 24H</div><div class="thermgrid"><div><small>DÜSE</small><b id="nozzle">–</b><em id="nozzleTarget">Ziel –</em></div><div><small>BETT</small><b id="bed">–</b><em id="bedTarget">Ziel –</em></div><div><small>KAMMER</small><b id="chamber">–</b><em>Sensorwert</em></div></div><canvas id="chart"></canvas></article></section><section class="grid overview-grid"><article class="panel camera-panel"><div class="label">LIVE KAMERA · LOKALE MJPEG-BRIDGE</div><div class="camera-frame"><img id="cameraImage" alt="P2S Livebild"><div id="cameraOverlay" class="camera-overlay">warte auf Kamera…</div></div><div class="camera-meta"><span id="cameraAge">–</span><span>RTSPS-Zugangsdaten bleiben auf dem Pi</span></div></article><article class="panel ams"><div class="label">AMS 2 PRO</div><div class="amshead"><div><small>TEMP</small><b id="amsTemp">–</b></div><div><small>FEUCHTE</small><b id="amsHum">–</b></div><div><small>AKTIV</small><b id="amsActive">–</b></div></div><div id="slots" class="slots"></div></article><article class="panel sys"><div class="label">SYSTEM</div><dl><div><dt>Collector</dt><dd id="collector">–</dd></div><div><dt>Pi Temperatur</dt><dd id="piTemp">–</dd></div><div><dt>WLAN</dt><dd id="wifi">–</dd></div><div><dt>HMS Meldungen</dt><dd id="hms">–</dd></div><div><dt>Kamera</dt><dd id="camera">–</dd></div></dl></article></section></div>
-<div class="view" data-view-panel="ams"><section class="panel"><div class="label">AMS 2 PRO · LIVE SLOT STATUS</div><div id="slotsFull" class="slots full"></div></section><section class="panel section-gap"><div class="label">RFID DIAGNOSE · REPORT-EBENE</div><div id="rfidRows" class="rfidrows"></div><p class="note">P2S/AMS-Reports sind teilweise transient. „reported“ bedeutet gemeldet, nicht physisch unabhängig verifiziert. UIDs bleiben lokal verborgen.</p></section></div>
-<div class="view" data-view-panel="spools"><section class="panel"><div class="label">OFFENE SPULENVERWALTUNG</div><div class="kpis four"><div><small>SPULEN</small><b id="spoolCount">0</b></div><div><small>AMS MATCHES</small><b id="matchCount">0</b></div><div><small>BEREIT</small><b id="proposalCount">0</b></div><div><small>BLOCKIERT</small><b id="blockedProposalCount">0</b></div></div><div id="spoolRows" class="spoolrows"></div><p class="note">Keine Demo-Daten. Einträge erscheinen erst nach realem Inventory-/NTAG-Sync.</p></section><section class="panel section-gap"><div class="label">EXTERNE NFC / NTAG BEOBACHTUNGEN</div><div id="externalTagRows" class="rfidrows"></div><p class="note">Browserdaten enthalten Reader, Slot, Tag-Typ und Matchstatus — niemals die rohe UID.</p></section></div>
-<div class="view" data-view-panel="prints"><section class="panel"><div class="label">DRUCKHISTORIE</div><div id="sessions" class="sessions-list"></div></section></div>
-<div class="view" data-view-panel="system"><section class="grid system-grid"><article class="panel sys"><div class="label">PI / BRIDGE</div><dl><div><dt>Hostname</dt><dd id="hostName">–</dd></div><div><dt>Collector</dt><dd id="collector2">–</dd></div><div><dt>Reader Bridge</dt><dd id="readerBridge">–</dd></div><div><dt>UI</dt><dd>active</dd></div><div><dt>Uptime</dt><dd id="uptime">–</dd></div><div><dt>Speicher frei</dt><dd id="disk">–</dd></div><div><dt>Pi Temperatur</dt><dd id="piTemp2">–</dd></div></dl></article><article class="panel"><div class="label">CAPABILITIES / SAFETY</div><div id="caps" class="caps"></div></article><article class="panel firmware-panel"><div class="label">P2S FIRMWARE / MODULE</div><div id="firmwareRows" class="firmware-rows"></div><p class="note">Nur Modulname, Hardware- und Softwareversion. Seriennummern werden nicht gespeichert oder ausgegeben.</p></article></section></div>
-<footer>PRINTBENCH STUDIO · LOCAL ONLY · READ-ONLY UI · <a href="https://github.com/jygnw29kms-bit/Printbench-Studio" rel="noreferrer">SOURCE</a> · <span id="updated">–</span></footer></main></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PRINTBENCH // P2S</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+<button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="Navigation ?ffnen" aria-expanded="false">&#9776;</button>
+<div id="navScrim" class="nav-scrim"></div>
+<div class="app">
+  <aside>
+    <div class="brand"><span>PB</span><div><b>PRINTBENCH</b><small>P2S SYSTEM</small></div></div>
+    <nav>
+      <button data-view="overview" class="active">01 ÜBERSICHT</button>
+      <button data-view="ams">02 AMS 2 PRO</button>
+      <button data-view="spools">03 SPULEN / RFID</button>
+      <button data-view="prints">04 DRUCKE</button>
+      <button data-view="system">05 SYSTEM</button>
+    </nav>
+    <div class="machine"><b>BAMBU LAB P2S</b><small>AMS 2 Pro · LAN ONLY</small></div>
+    <div class="bridge"><i></i><span id="collectorSide">Collector wird geprüft…</span></div>
+  </aside>
+
+  <main>
+    <header>
+      <div><small>PRINTBENCH LOCAL DEVICE CENTER</small><h1 id="pageTitle">P2S / AMS 2 PRO</h1></div>
+      <div class="headstat"><span id="onlineDot"></span><b id="onlineText">VERBINDE…</b><small id="age">–</small></div>
+    </header>
+
+    <div class="view active" data-view-panel="overview">
+      <section class="hero">
+        <article class="panel state">
+          <div class="label">DRUCKSTATUS</div>
+          <div class="bigrow"><strong id="state">–</strong><span id="progress">–%</span></div>
+          <div class="bar"><i id="progressBar"></i></div>
+          <div class="metrics"><div><small>LAYER</small><b id="layer">–</b></div><div><small>RESTZEIT</small><b id="remain">–</b></div><div><small>SPEED</small><b id="speed">–</b></div></div>
+        </article>
+        <article class="panel camera-panel hero-camera"><div class="label">P2S HERO &middot; LIVE KAMERA</div><div class="camera-frame"><img id="cameraImage" alt="P2S Livebild"><div id="cameraOverlay" class="camera-overlay">warte auf Kamera...</div></div><div class="camera-meta"><span id="cameraAge">-</span><span>LIVE &middot; P2S / AMS 2 PRO</span></div></article>
+        <article class="panel therm">
+          <div class="label">THERMIK · 24H</div>
+          <div class="thermgrid"><div><small>DÜSE</small><b id="nozzle">–</b><em id="nozzleTarget">Ziel –</em></div><div><small>BETT</small><b id="bed">–</b><em id="bedTarget">Ziel –</em></div><div><small>KAMMER</small><b id="chamber">–</b><em>Sensorwert</em></div></div>
+          <canvas id="chart"></canvas>
+        </article>
+      </section>
+
+      <section class="panel control-panel section-gap">
+        <div class="control-head"><div><div class="label">LIVE CONTROL · TRANSACTION ENGINE</div><b id="controlState">POLICY WIRD GEPRÜFT</b></div><span id="controlResult" class="control-result">–</span></div>
+        <div class="control-grid">
+          <div class="control-group"><small>DRUCK</small><div class="control-row"><button data-control="print.pause">PAUSE</button><button data-control="print.resume">FORTSETZEN</button><button data-control="print.stop" class="danger">STOP</button></div></div>
+          <div class="control-group"><small>LICHT</small><div class="control-row"><button data-control="printer.light" data-mode="on">AN</button><button data-control="printer.light" data-mode="off">AUS</button></div></div>
+          <div class="control-group"><small>SPEED MODE</small><div class="control-row speed-row"><button data-control="printer.speed" data-level="1">SILENT</button><button data-control="printer.speed" data-level="2">STANDARD</button><button data-control="printer.speed" data-level="3">SPORT</button><button data-control="printer.speed" data-level="4">LUDICROUS</button></div></div>
+        </div>
+        <div class="advanced-controls">
+          <div class="control-group thermal-control"><small>DÜSE °C</small><div class="control-row"><input id="nozzleSet" type="number" min="0" max="300" step="1" value="0"><button data-control="printer.nozzle_temp" data-input="nozzleSet">SETZEN</button></div></div>
+          <div class="control-group thermal-control"><small>BETT °C</small><div class="control-row"><input id="bedSet" type="number" min="0" max="120" step="1" value="0"><button data-control="printer.bed_temp" data-input="bedSet">SETZEN</button></div></div>
+          <div class="control-group thermal-control"><small>KAMMER °C</small><div class="control-row"><input id="chamberSet" type="number" min="0" max="60" step="1" value="0"><button data-control="printer.chamber_temp" data-input="chamberSet">SETZEN</button></div></div>
+          <div class="control-group"><small>LÜFTER 0–255</small><div class="control-row"><select id="fanIndex"><option value="0">PART</option><option value="1">AUX</option><option value="2">CHAMBER</option></select><input id="fanSpeed" type="number" min="0" max="255" step="1" value="0"><button data-control="printer.fan">SETZEN</button></div></div>
+        </div>
+        <p class="note">Jeder Befehl läuft über Whitelist, Sequenzkorrelation, lokale Policy und – wenn verfügbar – Post-State-Prüfung. Kein Raw-MQTT/G-Code-Endpunkt.</p>
+      </section>
+
+      <section class="grid overview-grid">
+        <article class="panel ams"><div class="label">AMS 2 PRO</div><div class="amshead"><div><small>TEMP</small><b id="amsTemp">–</b></div><div><small>FEUCHTE</small><b id="amsHum">–</b></div><div><small>AKTIV</small><b id="amsActive">–</b></div></div><div id="slots" class="slots"></div></article>
+        <article class="panel sys"><div class="label">SYSTEM</div><dl><div><dt>Collector</dt><dd id="collector">–</dd></div><div><dt>Pi Temperatur</dt><dd id="piTemp">–</dd></div><div><dt>WLAN</dt><dd id="wifi">–</dd></div><div><dt>HMS Meldungen</dt><dd id="hms">–</dd></div><div><dt>Kamera</dt><dd id="camera">–</dd></div></dl></article>
+      </section>
+    </div>
+
+    <div class="view" data-view-panel="ams">
+      <section class="panel"><div class="label">AMS 2 PRO · LIVE SLOT STATUS</div><div class="ams-dry"><div><small>TROCKNUNG</small><b id="dryState">–</b></div><div><small>IST / SOLL</small><b id="dryTemps">–</b></div><div><small>PROFIL</small><b id="dryProfile">–</b></div><div><small>ZEIT</small><b id="dryTime">–</b></div><button data-control="ams.stop_drying" class="warning">TROCKNUNG STOPPEN</button></div><div id="slotsFull" class="slots full"></div></section>
+      <section class="panel section-gap"><div class="label">RFID DIAGNOSE · REPORT-EBENE</div><div id="rfidRows" class="rfidrows"></div><p class="note">P2S/AMS-Reports sind teilweise transient. „reported“ bedeutet gemeldet, nicht physisch unabhängig verifiziert. UIDs bleiben lokal verborgen.</p></section>
+    </div>
+
+    <div class="view" data-view-panel="spools">
+      <section class="panel"><div class="label">OFFENE SPULENVERWALTUNG</div><div class="kpis four"><div><small>SPULEN</small><b id="spoolCount">0</b></div><div><small>AMS MATCHES</small><b id="matchCount">0</b></div><div><small>BEREIT</small><b id="proposalCount">0</b></div><div><small>BLOCKIERT</small><b id="blockedProposalCount">0</b></div></div><div id="spoolRows" class="spoolrows"></div><p class="note">Keine Demo-Daten. Einträge erscheinen erst nach realem Inventory-/NTAG-Sync.</p></section>
+      <section class="panel section-gap"><div class="label">EXTERNE NFC / NTAG BEOBACHTUNGEN</div><div id="externalTagRows" class="rfidrows"></div><p class="note">Browserdaten enthalten Reader, Slot, Tag-Typ und Matchstatus — niemals die rohe UID.</p></section>
+    </div>
+
+    <div class="view" data-view-panel="prints"><section class="panel"><div class="label">DRUCKHISTORIE</div><div id="sessions" class="sessions-list"></div></section></div>
+
+    <div class="view" data-view-panel="system">
+      <section class="grid system-grid">
+        <article class="panel sys"><div class="label">PI / BRIDGE</div><dl><div><dt>Hostname</dt><dd id="hostName">–</dd></div><div><dt>Collector</dt><dd id="collector2">–</dd></div><div><dt>Reader Bridge</dt><dd id="readerBridge">–</dd></div><div><dt>UI</dt><dd>active</dd></div><div><dt>Uptime</dt><dd id="uptime">–</dd></div><div><dt>Speicher frei</dt><dd id="disk">–</dd></div><div><dt>Pi Temperatur</dt><dd id="piTemp2">–</dd></div></dl></article>
+        <article class="panel"><div class="label">CAPABILITIES / SAFETY</div><div id="caps" class="caps"></div></article>
+        <article class="panel"><div class="label">CONTROL ENGINE</div><div id="controlCaps" class="caps"></div><p class="note">Schreibzugriff ist capability- und policy-basiert. Stop und Thermalsteuerung haben zusätzliche Freigaben.</p></article>
+        <article class="panel firmware-panel"><div class="label">P2S FIRMWARE / MODULE</div><div id="firmwareRows" class="firmware-rows"></div><p class="note">Nur Modulname, Hardware- und Softwareversion. Seriennummern werden nicht gespeichert oder ausgegeben.</p></article>
+      </section>
+    </div>
+
+    <footer>PRINTBENCH STUDIO · LOCAL ONLY · DEVICE API · <a href="https://github.com/jygnw29kms-bit/Printbench-Studio" rel="noreferrer">SOURCE</a> · <span id="updated">–</span></footer>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

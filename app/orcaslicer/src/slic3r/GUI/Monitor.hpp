@@ -54,6 +54,7 @@ namespace Slic3r {
 namespace GUI {
 
 class MediaFilePanel;
+class PrinterWebView;
 
 class AddMachinePanel : public wxPanel
 {
@@ -83,6 +84,7 @@ private:
     MediaFilePanel*     m_media_file_panel;
     UpgradePanel*       m_upgrade_panel;
     HMSPanel*           m_hms_panel;
+    PrinterWebView*      m_printbench_panel{ nullptr };
 
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
@@ -115,9 +117,10 @@ public:
         PT_STATUS  = 0,
         PT_MEDIA   = 1,
         PT_UPDATE  = 2,
-        PT_HMS     = 3,
-        PT_DEBUG   = 4,
-        PT_MAX_NUM = 5
+        PT_HMS        = 3,
+        PT_PRINTBENCH = 4,
+        PT_DEBUG      = 5,
+        PT_MAX_NUM    = 6
     };
 
 	void init_bitmap();

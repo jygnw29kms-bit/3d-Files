@@ -6,6 +6,7 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 
 #include <wx/app.h>
+#include <wx/utils.h>
 #include <wx/button.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
@@ -19,6 +20,7 @@
 #include <wx/wupdlock.h>
 #include <wx/dataview.h>
 #include <wx/tglbtn.h>
+#include <boost/nowide/fstream.hpp>
 
 #include "wxExtensions.hpp"
 #include "GUI_App.hpp"
@@ -31,6 +33,7 @@
 #include "MediaFilePanel.h"
 #include "Plater.hpp"
 #include "BindDialog.hpp"
+#include "PrinterWebView.hpp"
 
 #include "DeviceCore/DevManager.h"
 
@@ -197,6 +200,31 @@ void MonitorPanel::init_tabpanel()
 
     m_hms_panel = new HMSPanel(m_tabpanel);
     m_tabpanel->AddPage(m_hms_panel, _L("Assistant(HMS)"),    "", false);
+
+    // PRINTBENCH keeps printer credentials and raw Bambu transports on the local Pi bridge.
+    // The slicer embeds only the sanitized same-origin Device Center.
+    m_printbench_panel = new PrinterWebView(m_tabpanel);
+    m_tabpanel->AddPage(m_printbench_panel, _L("PRINTBENCH"), "", false);
+    wxString bridge_url;
+    if (!wxGetEnv("PRINTBENCH_BRIDGE_URL", &bridge_url) || bridge_url.empty())
+        bridge_url = "http://printbench-pi.local:8080/";
+
+    wxString control_token;
+    if (!wxGetEnv("PRINTBENCH_CONTROL_TOKEN", &control_token) || control_token.empty()) {
+        boost::nowide::ifstream token_file(Slic3r::data_dir() + "/printbench-control.token");
+        std::string token;
+        if (token_file.good() && std::getline(token_file, token) && !token.empty())
+            control_token = wxString::FromUTF8(token);
+    }
+    bool valid_control_token = control_token.length() == 64;
+    for (size_t i = 0; valid_control_token && i < control_token.length(); ++i) {
+        const wxChar ch = control_token[i];
+        valid_control_token = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+    }
+    if (!valid_control_token)
+        control_token.clear();
+
+    m_printbench_panel->load_url(bridge_url, control_token);
 
     std::string network_ver = Slic3r::NetworkAgent::get_version();
     if (!network_ver.empty()) {
@@ -501,6 +529,8 @@ std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
         return "update";
     case PT_HMS:
         return "HMS";
+    case PT_PRINTBENCH:
+        return "printbench";
     case PT_DEBUG:
         return "debug";
     default:
