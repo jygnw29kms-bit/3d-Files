@@ -3,8 +3,8 @@ set -euo pipefail
 umask 027
 
 IMAGE_VERSION="PRINTBENCH-Pi-Bridge 1.1.0-dev"
-COLLECTOR_COMMIT="c530ffa"
-COLLECTOR_SHA="0A05C2A8448B3C3EB6DB90A26EC0C0793CA09D3BC4B35BC0537D08A568EF9EF8"
+COLLECTOR_COMMIT="d542f4d7d54e"
+COLLECTOR_SHA="9D0B1CF19889E4AF8AC8C312A9AB987059DA5C1125DDFAF1F65D90E13EAEEC3D"
 BOOT_ARCHIVE="/boot/firmware/printbench-collector.tar.gz"
 
 mkdir -p /opt/printbench /etc/printbench /var/lib/printbench /var/log/journal /etc/ssh/sshd_config.d /etc/systemd/journald.conf.d
