@@ -28,3 +28,21 @@ public-live-media.png
 /tools/printbench_collector/.spool-admin-token
 
 /ios/PrintbenchNFC/dist/
+
+# PRINTBENCH Raspberry Pi image build artifacts / local access key
+/pi-image/*.img
+/pi-image/*.img.xz
+/pi-image/*.sha256
+/pi-image/raspios*.xz
+/pi-image/keys/
+/pi-image/user-data
+/pi-image/meta-data
+/pi-image/network-config
+/pi-image/printbench-collector.tar.gz
+/pi-image/decompress.py
+/pi-image/compress_image.py
+/pi-image/inspect_*.py
+/pi-image/verify_image.py
+/pi-image/fix_groups.py
+/pi-image/patch_pi_support.py
+/pi-image/fix_daemon.py

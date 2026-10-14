@@ -1,0 +1,43 @@
+#cloud-config
+hostname: printbench-pi
+manage_etc_hosts: true
+timezone: Europe/Berlin
+locale: de_DE.UTF-8
+ssh_pwauth: false
+disable_root: true
+ssh_deletekeys: true
+ssh_genkeytypes: [rsa, ecdsa, ed25519]
+users:
+  - name: printbench
+    gecos: PRINTBENCH Bridge
+    groups: [adm, sudo, dialout, plugdev, video]
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - __PRINTBENCH_SSH_PUBLIC_KEY__
+package_update: true
+package_upgrade: true
+packages:
+  - openssh-server
+  - avahi-daemon
+  - git
+  - python3-venv
+  - python3-pip
+  - ca-certificates
+  - curl
+  - jq
+  - nftables
+  - tcpdump
+  - socat
+  - ethtool
+  - usbutils
+  - i2c-tools
+  - mosquitto-clients
+  - sqlite3
+  - ffmpeg
+  - rsync
+  - tmux
+runcmd:
+  - [ bash, /boot/firmware/printbench-firstboot.sh ]
+final_message: "PRINTBENCH Pi Bridge ready. SSH: printbench@printbench-pi.local"
