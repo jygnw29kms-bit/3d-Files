@@ -52,7 +52,22 @@ jobs:
           done
           cp -a assets Druckkosten-Rechner LST-Klammer LST-Clips dist/
 
+      - name: Detect deploy credentials
+        id: deploy_credentials
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          if [ -n "$SFTP_HOST" ] && [ -n "$SFTP_USERNAME" ] && [ -n "$SFTP_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Repository deploy secrets are not configured; validation/build completed, deployment skipped."
+          fi
+
       - name: Deploy to dezender.de/3d-druck
+        if: steps.deploy_credentials.outputs.available == 'true'
         uses: wlixcc/SFTP-Deploy-Action@da88a4dbe95286266bbac3c0b2b8284048d20c8f
         with:
           username: ${{ secrets.SFTP_USERNAME }}
@@ -63,9 +78,9 @@ jobs:
           delete_remote_files: false
 
       - name: Smoke test
+        if: steps.deploy_credentials.outputs.available == 'true'
         run: |
           set -euo pipefail
           sleep 4
-          curl --fail --retry 5 --retry-delay 3 https://www.dezender.de/3d-druck/index.php | grep -q 'PRINTBENCH\|BAMBU LAB P2S'
+          curl --fail --retry 5 --retry-delay 3 https://www.dezender.de/3d-druck/index.php | grep -Eq 'PRINTBENCH|BAMBU LAB P2S'
           curl --fail --retry 5 --retry-delay 3 https://www.dezender.de/3d-druck/api.php | grep -q 'PRINTBENCH'
-          curl --fail --retry 5 --retry-delay 3 https://www.dezender.de/3d-druck/live-data.php >/dev/null || true

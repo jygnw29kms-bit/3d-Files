@@ -10,7 +10,20 @@ function pb_runtime_dir(): string {
     return $dir;
 }
 
-function pb_spool_file(): string { return pb_runtime_dir() . '/spools.json'; }
+function pb_private_dir(): ?string {
+    $dir='/var/www/vhosts/dezender.de/private';
+    return is_dir($dir) && is_writable($dir) ? $dir : null;
+}
+
+function pb_spool_file(): string {
+    $private=pb_private_dir();
+    if ($private!==null) return $private . '/printbench-spools.json';
+    $runtime=pb_runtime_dir();
+    $deny=$runtime.'/.htaccess';
+    $rules="<FilesMatch \"^(spools\\.json|\\.spool-secret)$\">\nRequire all denied\n</FilesMatch>\n";
+    if (!is_file($deny) || strpos((string)@file_get_contents($deny),'spools\\.json')===false) @file_put_contents($deny,$rules,LOCK_EX);
+    return $runtime . '/spools.json';
+}
 
 function pb_json_response(array $data, int $status=200): never {
     http_response_code($status);
@@ -45,9 +58,8 @@ function pb_require_admin(): void {
 }
 
 function pb_secret_path(): string {
-    $plesk='/var/www/vhosts/dezender.de/private/printbench-spool-secret';
-    $parent=dirname($plesk);
-    if (is_dir($parent) && is_writable($parent)) return $plesk;
+    $private=pb_private_dir();
+    if ($private!==null) return $private . '/printbench-spool-secret';
     return pb_runtime_dir() . '/.spool-secret';
 }
 

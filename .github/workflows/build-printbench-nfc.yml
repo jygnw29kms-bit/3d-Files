@@ -1,0 +1,56 @@
+name: Build PRINTBENCH NFC IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ios/PrintbenchNFC/**'
+      - '.github/workflows/build-printbench-nfc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios/PrintbenchNFC
+        run: xcodegen generate
+      - name: Build unsigned device app
+        working-directory: ios/PrintbenchNFC
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project PrintbenchNFC.xcodeproj \
+            -scheme PrintbenchNFC \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned IPA
+        working-directory: ios/PrintbenchNFC
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/PRINTBENCH NFC.app"
+          test -d "$APP"
+          rm -rf Payload PRINTBENCH-NFC-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          /usr/bin/zip -qry PRINTBENCH-NFC-unsigned.ipa Payload
+          shasum -a 256 PRINTBENCH-NFC-unsigned.ipa > PRINTBENCH-NFC-unsigned.ipa.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PRINTBENCH-NFC-unsigned-IPA
+          path: |
+            ios/PrintbenchNFC/PRINTBENCH-NFC-unsigned.ipa
+            ios/PrintbenchNFC/PRINTBENCH-NFC-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 30

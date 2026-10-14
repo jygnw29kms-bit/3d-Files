@@ -3,9 +3,7 @@ import SwiftUI
 @main
 struct PrintbenchNFCApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+        WindowGroup { ContentView() }
     }
 }
 
@@ -21,12 +19,7 @@ struct ContentView: View {
                 VStack(spacing: 20) {
                     header
                     statusCard
-
-                    if let payload {
-                        spoolCard(payload)
-                    } else {
-                        emptyCard
-                    }
+                    if let payload { spoolCard(payload) } else { emptyCard }
 
                     Button {
                         showingScanner = true
@@ -87,7 +80,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Spool → NFC")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-            Text("QR aus PRINTBENCH scannen, NTAG216 beschreiben und dessen echte UID für die spätere AMS-Erkennung übernehmen.")
+            Text("QR aus PRINTBENCH scannen, NTAG216 beschreiben, zurücklesen und die echte UID automatisch mit der Spule verknüpfen.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -101,6 +94,11 @@ struct ContentView: View {
             Text(nfcWriter.status)
                 .font(.callout)
                 .foregroundStyle(.secondary)
+            if nfcWriter.serverLinked {
+                Label("UID mit PRINTBENCH verknüpft", systemImage: "checkmark.shield.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+            }
             if let uid = nfcWriter.lastUID {
                 Text("UID  \(uid)")
                     .font(.system(.caption, design: .monospaced))
@@ -141,6 +139,11 @@ struct ContentView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
+            if let expires = payload.expiresAt {
+                Text("NFC-Claim gültig bis: \(expires)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
