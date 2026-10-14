@@ -1,0 +1,27 @@
+{
+  "product": "PRINTBENCH Studio",
+  "hardware": {
+    "printer_vendor": "Bambu Lab",
+    "printer_model": "P2S",
+    "orca_model_id": "N7",
+    "ams": "AMS 2 Pro",
+    "ams_required": true,
+    "supported_nozzles_mm": [0.2, 0.4, 0.6, 0.8],
+    "default_nozzle_mm": 0.4,
+    "default_bed": "Textured PEI Plate"
+  },
+  "orca": {
+    "version": "2.4.2",
+    "upstream_tag": "v2.4.2",
+    "upstream_tag_sha": "8500fcdccaa10b5099ac20d252af3a7c560046f1",
+    "source_dir": "app/orcaslicer"
+  },
+  "boundaries": {
+    "normal_ui_other_printers": false,
+    "custom_printer_creation": false,
+    "printer_control_via_pi_bridge": true,
+    "raw_rfid_uid_in_browser": false,
+    "ams_writes_default": false,
+    "cloud_required": false
+  }
+}

@@ -562,8 +562,9 @@ PagePrinters::PagePrinters(ConfigWizard *parent,
     const auto families = vendor.families();
     for (const auto &family : families) {
         const auto filter = [&](const VendorProfile::PrinterModel &model) {
-            return ((model.technology == ptFFF && technology & T_FFF)
-                    || (model.technology == ptSLA && technology & T_SLA))
+            // PRINTBENCH product boundary: only Bambu Lab P2S (N7) is user-selectable.
+            return vendor.id == "BBL" && model.id == "N7"
+                && model.technology == ptFFF && (technology & T_FFF)
                 && model.family == family;
         };
 
@@ -1785,17 +1786,8 @@ void ConfigWizard::priv::load_pages()
 
     index->clear();
 
-    // Printers
+    // PRINTBENCH has one fixed printer family; custom-printer creation is intentionally not exposed.
     if (!only_sla_mode) {
-        index->add_page(page_custom);
-        if (page_custom->custom_wanted()) {
-            index->add_page(page_firmware);
-            index->add_page(page_bed);
-            index->add_page(page_diams);
-            //index->add_page(page_temps);
-        }
-   
-    // Filaments & Materials
         if (any_fff_selected) { index->add_page(page_filaments); }
     }
     if (any_sla_selected) { index->add_page(page_sla_materials); }
@@ -1856,6 +1848,11 @@ void ConfigWizard::priv::load_vendors()
             }
     }
 
+    // PRINTBENCH product contract: discard legacy/foreign printer selections and install P2S 0.4 by default.
+    AppConfig::VendorMap printbench_vendors;
+    appconfig_new.set_vendors(std::move(printbench_vendors));
+    appconfig_new.set_variant("BBL", "N7", "0.4", true);
+
     // Initialize the is_visible flag in printer Presets
     for (auto &pair : bundles) {
         pair.second.preset_bundle->load_installed_printers(appconfig_new);
@@ -1909,8 +1906,8 @@ void ConfigWizard::priv::set_start_page(ConfigWizard::StartPage start_page)
 {
     switch (start_page) {
         case ConfigWizard::SP_CUSTOM:
-            index->go_to(page_custom);
-            btn_next->SetFocus();
+            index->go_to(page_filaments);
+            btn_finish->SetFocus();
             break;
         case ConfigWizard::SP_FILAMENTS:
             index->go_to(page_filaments);
@@ -1921,8 +1918,8 @@ void ConfigWizard::priv::set_start_page(ConfigWizard::StartPage start_page)
             btn_finish->SetFocus();
             break;
         default:
-            index->go_to(page_custom);
-            btn_next->SetFocus();
+            index->go_to(page_filaments);
+            btn_finish->SetFocus();
             break;
     }
 }
@@ -1931,6 +1928,8 @@ void ConfigWizard::priv::create_3rdparty_pages()
 {
     for (const auto &pair : bundles) {
         const VendorProfile *vendor = pair.second.vendor_profile;
+        // PRINTBENCH product boundary: no unrelated printer vendors in the wizard.
+        if (vendor->id != "BBL") { continue; }
         //Orca: add custom as default
         if (vendor->id == PresetBundle::ORCA_DEFAULT_BUNDLE) { continue; }
 
@@ -2694,12 +2693,12 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     const VendorProfile * vendor_bbl = bbl_it->second.vendor_profile;
     
     p->only_sla_mode = false;
-    p->any_sla_selected = p->check_sla_selected();
-    if (p->only_sla_mode)
-        p->any_fff_selected = p->check_fff_selected();
+    p->any_sla_selected = false;
+    p->any_fff_selected = p->check_fff_selected();
 
 	p->add_page(p->page_custom = new PageCustom(this));
-    p->custom_printer_selected = p->page_custom->custom_wanted();
+    p->page_custom->Hide();
+    p->custom_printer_selected = false;
 
     p->add_page(p->page_firmware = new PageFirmware(this));
     p->add_page(p->page_bed      = new PageBedShape(this));

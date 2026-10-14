@@ -1675,6 +1675,8 @@ Sidebar::Sidebar(Plater *parent)
             PhysicalPrinterDialog dlg(this->GetParent());
             dlg.ShowModal();
         });
+        // PRINTBENCH uses the dedicated P2S/Pi bridge; generic print-host setup is not exposed.
+        p->m_printer_connect->Hide();
 
         // ORCA use sync button on titlebar
         p->m_printer_bbl_sync = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "printer_sync_not");

@@ -6393,6 +6393,9 @@ void GUI_App::add_pending_vendor_preset(const std::pair<std::string, std::map<st
 
     // Add the corresponding vendor
     std::string vendor_name = PresetBundle::find_preset_vendor(inherits_name, type);
+    // PRINTBENCH: printer presets may only extend the fixed Bambu Lab P2S family.
+    if (type == Preset::Type::TYPE_PRINTER && (vendor_name != "BBL" || inherits_name.rfind("Bambu Lab P2S", 0) != 0))
+        return;
     if (need_add_vendors.find(vendor_name) == need_add_vendors.end())
         need_add_vendors[vendor_name] = std::map<std::string, std::set<std::string>>();
 

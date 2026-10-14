@@ -46,3 +46,15 @@ public-live-media.png
 /pi-image/fix_groups.py
 /pi-image/patch_pi_support.py
 /pi-image/fix_daemon.py
+
+/tests/__pycache__/
+/pi-image/__pycache__/
+
+# Python caches
+**/__pycache__/
+*.pyc
+# Local operational databases
+/tools/printbench_collector/*.db
+/tools/printbench_collector/*.db-*
+/tools/printbench_collector/*.sqlite
+/tools/printbench_collector/*.sqlite3

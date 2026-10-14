@@ -1,42 +1,52 @@
-# 3D Files
+# PRINTBENCH Studio
 
-3D-Druckmodelle und Druckplatten.
+PRINTBENCH Studio is a local 3D-printing application based on OrcaSlicer and deliberately scoped to **Bambu Lab P2S + AMS 2 Pro**. The repository contains the desktop slicer, Raspberry Pi bridge, local machine UI, spool/NTAG logic, telemetry, print history, cost analysis, calibration artifacts and project documentation.
 
-## Druckkosten-Rechner
+## Product scope
 
-- [P2S + AMS 2 Pro Druckkosten-Rechner](Druckkosten-Rechner/index.html)
-- Upload/Auswertung von STL, 3MF und G-Code
-- Materialkosten über zentralen €/kg-Katalog mit Marken wie KINGROON, SUNLU, JAYO, eSUN, GEEETECH, Anycubic, Elegoo, Bambu Lab, Polymaker, Prusament, Extrudr und Fiberlogy
-- Preisquellen-Katalog: 3D Filament Profiles, Open Filament Database, SpoolHound, Spulenheld und Printerials
-- Strompreis standardmäßig 0,40 €/kWh
-- Bambu Lab P2S Energie, Maschinenstundensatz, Ausschussreserve, Vorbereitung/Aufbereitung und Marge
-- AMS 2 Pro separat: Betrieb und aktive Filamenttrocknung
-- lokale Preis-Overrides im Browser
+- Printer: Bambu Lab P2S (`model_id=N7`)
+- Material system: AMS 2 Pro
+- Nozzles: 0.2 / 0.4 / 0.6 / 0.8 mm; default 0.4 mm
+- Default build plate: Textured PEI Plate
+- Orca baseline: 2.4.2, upstream tag `v2.4.2`
+- Pi bridge: local telemetry, adaptive camera, RFID/NTAG, spool and session data
+- Open-tag path: ESP32/RC522 over a versioned USB-serial contract; reader service disabled until hardware is validated
+- Cloud is not required for local machine operation
+- AMS state-changing writes are disabled by default
+- Raw RFID/NFC UIDs are never exposed to browser clients or committed to Git
 
-## LST-Klammer: verstärkte Schenkel, Bambu Lab P2S
+The machine-readable contract is `config/product-contract.json`. Validate it with `python tools/validate_product_contract.py`.
 
-- [3MF: Druckplatte mit 24 Klammern](LST-Klammer/LST-Klammer-P2S-24x-4mm.3mf)
-- [STL: Einzelteil](LST-Klammer/LST-Klammer-4mm.stl)
-- [ZIP: alle Druckdateien und Vorschau](LST-Klammer/LST-Klammer-Download.zip)
-- [Prüfbericht](LST-Klammer/Pruefbericht.json)
+## Architecture
 
-![Druckplatte](LST-Klammer/P2S-Druckplatte.png)
+`app/orcaslicer/` contains the deliberately upstream-near OrcaSlicer engine. PRINTBENCH-specific behavior should live outside the C++ core whenever practical and connect through explicit adapters and services. The Pi communicates with the P2S only on the trusted LAN and exposes sanitized data to the desktop application and Pi UI.
 
-Beide geraden Schenkel wurden von ca. 1,33 auf 4 mm verstärkt. Außenmaße: 20 × 149,83 × 4 mm. Innere Öffnung der geraden Schenkel: ca. 8,67 mm. Die Zähne und Außenmaße bleiben erhalten; die Verstärkung liegt innen und geht in den bestehenden Bogen über.
+The current Pi UI is available on the trusted LAN at `http://192.168.178.80:8080/`. It is read-only and provides live telemetry, AMS state, RFID diagnostics, spool state, print history, bridge diagnostics and the locally bridged P2S camera feed.
 
-24 Teile auf einer 256 × 256 mm P2S-Platte, mindestens 1,49 mm Teileabstand und 4,76 mm Randabstand. Das vorhandene P2S-Profil mit 0,4-mm-Düse, 0,2-mm-Schichthöhe und Filamentplatz 2 (Generic PLA Silk) wurde übernommen. Brim, Skirt und Reinigungsturm sind deaktiviert; Druck nach Schichten.
+## Repository layout
 
-Geschlossene, konsistent orientierte Geometrie, Manifold-Status, Abstände und 3MF-Import wurden geprüft. Ein Slicer-Lauf oder realer Druck wurde nicht durchgeführt. Vor dem Druck in Bambu Studio slicen und die Schichtvorschau prüfen.
+- `app/orcaslicer/` - OrcaSlicer 2.4.2 engine baseline
+- `tools/printbench_collector/` - P2S/AMS collector, Pi services, camera and reader bridge
+- `config/` - product contract and configuration
+- `docs/` - architecture, security and hardware/protocol documentation
+- `pi-image/` - reproducible Raspberry Pi bridge image source
+- `ios/` - NFC helper application
+- `Druckkosten-Rechner/` - filament/cost logic and data
+- `LST-Clips/`, `LST-Klammer/` - project print parts
 
-### Herkunft
+## Verification status
 
-Remix des Modells **LST helper (low stress training for plants)** von **extrawitz**, aus der vom Nutzer bereitgestellten Datei `LST-Klammer.3mf`. Das ursprüngliche 3MF nennt die Lizenz **Standard Digital File License**. Es wird keine zusätzliche Lizenz für das Originalmodell erteilt; die ursprünglichen Lizenzbedingungen gelten weiterhin. Die ursprünglichen Designer- und Lizenzangaben bleiben im 3MF erhalten.
+- Product contract validated against Orca 2.4.2, P2S `N7` and all four supported P2S nozzle profiles
+- Reader/NTAG contract and external-tag pipeline covered by unit tests
+- Pi UI plus JPEG/MJPEG camera bridge verified against the real P2S and Pi on the LAN
+- systemd units verified on the real Pi with `systemd-analyze verify`
+- Reader service remains disabled until physical reader hardware is installed and validated
+- Full Windows build of the Orca C++ fork remains pending because the current development PC does not have CMake/MSBuild in PATH
 
-## LST-Clips: volle Platte für P2S und KINGROON HS-PLA
+## Security principles
 
-- [428 Clips: Druckplatte als 3MF](LST-Clips/P2S-KINGROON-HS-PLA/LST_428_P2S_KINGROON_HS_PLA.3mf)
-- [Passprobe mit sechs Clips](LST-Clips/P2S-KINGROON-HS-PLA/LST_Passprobe_6_P2S_KINGROON_HS_PLA.3mf)
-- [Komplettes Download-Paket als ZIP](LST-Clips/P2S-KINGROON-HS-PLA/P2S_KINGROON_LST_Druckpaket.zip)
-- [Beschreibung, Vorschau und Druckhinweise](LST-Clips/P2S-KINGROON-HS-PLA/README.md)
+P2S LAN access codes, tokens, private SSH keys and raw NFC/RFID UIDs must not be committed. The Pi UI is restricted to the trusted target LAN. Printer writes are separated from read/diagnostic operations and require explicit enablement. Browser clients never receive the credential-bearing RTSPS URL or raw MQTT payloads.
 
-Für P2S mit 0,4-mm-Standarddüse und KINGROON HS-PLA; erfolgreich gesliced, geschätzt 5 h 32 min und 72 g PLA. Physische Druckqualität und Passform müssen mit der Passprobe geprüft werden.
+## License
+
+The embedded OrcaSlicer source is licensed under GNU AGPL-3.0. Combined distribution must comply with the corresponding license obligations. Third-party assets and optional proprietary networking components retain their own terms; see `THIRD_PARTY_NOTICES.md`.
