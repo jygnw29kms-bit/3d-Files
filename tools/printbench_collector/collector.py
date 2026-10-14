@@ -6,7 +6,8 @@ import paho.mqtt.client as mqtt
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'printbench.db'
-BAMBU_CONF = Path(os.environ.get('PRINTBENCH_BAMBU_CONFIG', '')) if os.environ.get('PRINTBENCH_BAMBU_CONFIG') else (Path.home() / 'AppData' / 'Roaming' / 'BambuStudio' / 'BambuStudio.conf')
+_PI_BAMBU_CONF = Path('/etc/printbench/bambu.json')
+BAMBU_CONF = Path(os.environ.get('PRINTBENCH_BAMBU_CONFIG', '')) if os.environ.get('PRINTBENCH_BAMBU_CONFIG') else (_PI_BAMBU_CONF if _PI_BAMBU_CONF.is_file() else (Path.home() / 'AppData' / 'Roaming' / 'BambuStudio' / 'BambuStudio.conf'))
 BAMBU_TEMP = Path(os.environ.get('PRINTBENCH_SLICER_TEMP', '')) if os.environ.get('PRINTBENCH_SLICER_TEMP') else (Path(os.environ.get('LOCALAPPDATA', '')) / 'Temp' / 'bamboo_model')
 P2S_HOST = os.environ.get('PRINTBENCH_P2S_HOST', '192.168.178.110').strip() or '192.168.178.110'
 
