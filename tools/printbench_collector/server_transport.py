@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os, posixpath, shlex, subprocess
 from pathlib import Path
+import quiet_process
 
 SSH_HOST = '87.106.119.187'
 SSH_USER = 'root'
@@ -23,7 +24,7 @@ def _ssh_cmd(remote_command: str) -> list[str]:
 
 def exec_remote(command: str, timeout: int = 15) -> None:
     r = subprocess.run(_ssh_cmd(command), stdout=subprocess.DEVNULL,
-                       stderr=subprocess.PIPE, timeout=timeout)
+                       stderr=subprocess.PIPE, timeout=timeout, **quiet_process.options())
     if r.returncode:
         raise RuntimeError(f'ssh exit {r.returncode}')
 
@@ -39,7 +40,7 @@ def put_file_atomic(local_path: Path, relative_path: str, timeout: int = 60, mod
     remote_cmd = f'umask 022; mkdir -p {q(parent)}; cat > {q(tmp)} && mv -f {q(tmp)} {q(remote)} && chmod {mode} {q(remote)}'
     with local_path.open('rb') as src:
         r = subprocess.run(_ssh_cmd(remote_cmd), stdin=src, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.PIPE, timeout=timeout)
+                           stderr=subprocess.PIPE, timeout=timeout, **quiet_process.options())
     if r.returncode:
         raise RuntimeError(f'ssh upload exit {r.returncode}')
 
@@ -53,6 +54,6 @@ def put_bytes_atomic(data: bytes, relative_path: str, timeout: int = 30, mode: s
     q = shlex.quote
     remote_cmd = f'umask 022; mkdir -p {q(parent)}; cat > {q(tmp)} && mv -f {q(tmp)} {q(remote)} && chmod {mode} {q(remote)}'
     r = subprocess.run(_ssh_cmd(remote_cmd), input=data, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.PIPE, timeout=timeout)
+                       stderr=subprocess.PIPE, timeout=timeout, **quiet_process.options())
     if r.returncode:
         raise RuntimeError(f'ssh upload exit {r.returncode}')
