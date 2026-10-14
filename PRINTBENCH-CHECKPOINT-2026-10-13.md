@@ -116,3 +116,66 @@
 4. Put that tagged spool in AMS 2 Pro and trigger/read normal AMS detection.
 5. Compare `tray_reading_bits`, `tray_read_done_bits`, `ams_rfid_status`, `tag_uid`, `tray_uuid` and slot state against the captured baseline.
 6. If AMS exposes the NTAG UID anywhere, wire automatic `UID -> spool -> AMS slot setting`; otherwise proceed to bus-level V2 capture.
+## 2026-10-14 — Continued engineering: costs, AMS control, private spool sync, free iPhone NFC
+
+### Historical cost snapshots
+- Added `costing.py` + versioned `cost_config.json`.
+- Every finished print session freezes the rates used at that time: material €/kg, electricity €/kWh, machine €/h, margin, estimated kWh, material/electricity/machine/self cost and sale price.
+- Explicitly marked energy as estimated until a real power meter is connected.
+- Current defaults: 18.99 €/kg, 0.40 €/kWh, 0.65 €/h, 20% margin, 0.20 kW average + 0.10 kWh startup estimate.
+- Synthetic cost/session tests passed. Live payload now exposes the public cost configuration and history renders session cost snapshots.
+- Commit: `bb22de5`.
+
+### Spool lifecycle + filament database
+- Spool cards now support remaining-weight updates and recording a drying timestamp.
+- An NFC deep-link (`?spool=PB-...#spools`) highlights and scrolls to the matching spool.
+- Spool creation reads `Druckkosten-Rechner/data/filaments.json` for vendor suggestions, materials and €/kg proposal scaled to spool weight; manual price always wins.
+- No unverified nozzle/drying values are invented from the price database.
+- Commits: `81b9e14`, `ab8dc47`.
+
+### Private spool inventory sync / UID matching
+- Collector syncs protected spool detail data into local SQLite every 5 minutes using the local admin token.
+- New local tables: `spool_inventory`, `ams_spool_matches`.
+- AMS `tag_uid`/`tray_uuid` observations are matched locally to PRINTBENCH spool UIDs; matches/unmatched states are local events only.
+- Raw UID/private spool data remain excluded from web payloads.
+- Commit: `de96848`.
+
+### AMS control layer — fail closed
+- Added `ams_control.py`, `ams_control.json`, `ams_cli.py`.
+- Verified payload builders for `ams_get_rfid` and `ams_filament_setting`.
+- Generic material IDs currently mapped for PLA/PETG/TPU/PVA/PLA-CF/PC/PA/PA-CF/ASA/ABS.
+- All commands are dry-run by default. Real writes are hard-disabled with `write_enabled=false` until the NTAG216 hardware test proves UID detection and slot mapping.
+- `--apply` currently fails cleanly instead of touching the AMS.
+- Commit: `047d401`.
+
+### iOS signing reality + free fallback
+- Native companion builds successfully as an unsigned device IPA in GitHub macOS/Xcode CI.
+- Important: free Apple-ID sideloading cannot be assumed to grant the Core NFC custom entitlement. The native app is retained but is not the only production path.
+- Added a zero-paid-account fallback around the free App Store app NFC21 Tools:
+  1. PRINTBENCH creates one signed 15-minute QR.
+  2. Normal iPhone camera opens `spool-write.php`.
+  3. Page shows the stable PRINTBENCH URL to write to NTAG216.
+  4. NFC21 Tools writes the URL and reads the physical UID/serial.
+  5. User pastes the UID into the same signed PRINTBENCH page.
+  6. Server validates the signed claim and binds UID to the spool with duplicate/rebind protection.
+- The same QR remains consumable by the native companion where Core NFC entitlement is available.
+- `spool-write.php` and legacy `spool-claim.php` both fail closed for expired/invalid claims.
+- Live tests: spool list 200; invalid spool-write claim 403; invalid legacy claim 403; manager exposes NFC21 fallback.
+- Commit: `dc7561f`.
+
+### Current native IPA artifact
+- GitHub build run #4 succeeded for `dc7561f`.
+- Latest local artifact: `ios/PrintbenchNFC/dist/PRINTBENCH-NFC-unsigned.ipa`.
+- SHA-256 verified against generated checksum: `3039d56795b1c1199c661cf7b46d8379a7b44d7ebe27bf8dedc8e461ed0c1276`.
+- IPA remains unsigned by design for Sideloadly/AltStore re-signing; NFC entitlement availability must be runtime-tested after signing.
+
+### Real hardware gate before enabling AMS writes
+1. Create first real spool in PRINTBENCH.
+2. Generate signed QR.
+3. Program an existing NTAG216 using NFC21 fallback (or native companion if entitlement works).
+4. Verify UID is bound server-side and appears in local `spool_inventory` after sync.
+5. Put tagged spool into AMS 2 Pro and trigger a normal RFID re-read.
+6. Compare against stored baseline using `python tools/printbench_collector/rfid_status.py --limit 40` and inspect `ams_spool_matches`.
+7. If AMS exposes a matching non-zero UID, connect `UID -> spool -> ams_filament_setting`, still with safety checks for slot/material/printer state.
+8. Only after a controlled dry-run and one confirmed hardware test consider `write_enabled=true`.
+9. If AMS does not expose NTAG UID, proceed with the planned bus-level V2 capture instead of guessing.
