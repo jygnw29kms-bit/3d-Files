@@ -1,0 +1,25 @@
+[Unit]
+Description=PRINTBENCH Local P2S UI
+After=network-online.target printbench-collector.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=printbench
+Group=printbench
+WorkingDirectory=/opt/printbench/repo/tools/printbench_collector/pi_ui
+ExecStart=/usr/bin/python3 /opt/printbench/repo/tools/printbench_collector/pi_ui/server.py
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/printbench/repo/tools/printbench_collector
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
