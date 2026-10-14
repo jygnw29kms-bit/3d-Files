@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import json, ssl, threading, time
 from pathlib import Path
 from typing import Any
@@ -57,7 +57,9 @@ def build_filament_setting(ams_id,tray_id,material,color,nozzle_temp_min,nozzle_
 def send(command:dict,apply=False,timeout=None):
     cfg=load_config(); payload=json.loads(json.dumps(command))
     if not apply:return {'ok':True,'dry_run':True,'payload':payload}
-    if not cfg.get('write_enabled',False):raise RuntimeError('AMS writes are disabled in ams_control.json')
+    command_name=str((payload.get('print') or {}).get('command',''))
+    if command_name!='ams_get_rfid' and not cfg.get('write_enabled',False):
+        raise RuntimeError('AMS writes are disabled in ams_control.json')
     serial,code=collector.load_local_bambu_identity(); req=f'device/{serial}/request'; report=f'device/{serial}/report'
     wanted=str(payload.get('print',{}).get('sequence_id','')); event=threading.Event(); answer={}
     client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,protocol=mqtt.MQTTv311)
