@@ -1,0 +1,23 @@
+name: PrintbenchNFC
+options:
+  bundleIdPrefix: de.dezender.printbench
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: 16.0
+    SWIFT_VERSION: 5.9
+targets:
+  PrintbenchNFC:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    info:
+      path: Sources/Info.plist
+    entitlements:
+      path: Sources/PrintbenchNFC.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.dezender.printbench.nfc
+        PRODUCT_NAME: PRINTBENCH NFC
+        TARGETED_DEVICE_FAMILY: 1
+        CODE_SIGN_STYLE: Automatic
