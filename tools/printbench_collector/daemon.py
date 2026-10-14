@@ -5,6 +5,7 @@ import collector
 import push_live
 import media_worker
 import session_tracker
+import ams_rfid_diag
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -29,6 +30,7 @@ def main():
         return
     db = collector.db_open()
     session_tracker.ensure_schema(db)
+    ams_rfid_diag.ensure_schema(db)
     serial, code = collector.load_local_bambu_identity()
     topic_report = f'device/{serial}/report'
     topic_req = f'device/{serial}/request'
@@ -58,6 +60,7 @@ def main():
         try:
             raw = json.loads(m.payload.decode('utf-8', 'ignore'))
             collector.save_raw_mqtt(db, m.topic, raw)
+            ams_rfid_diag.observe(db, raw, collector.now_iso())
             p = raw.get('print') if isinstance(raw, dict) else None
             if isinstance(p, dict) and any(k in p for k in ('gcode_state','mc_percent','nozzle_temper','bed_temper','spd_mag','ams')):
                 n = collector.save_report(db, raw)
