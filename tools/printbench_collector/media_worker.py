@@ -3,15 +3,16 @@ import json, posixpath, shlex, shutil, sqlite3, subprocess, threading, time
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
-import collector, server_transport, native_media
+import collector, server_transport, native_media, session_tracker
 
 ROOT=Path(__file__).resolve().parent
 MEDIA=ROOT/'media'; FRAMES=MEDIA/'timelapse_frames'; TOKEN_FILE=ROOT/'.push-token'
 INGEST='https://www.dezender.de/3d-druck/media-ingest.php'
 ACTIVE_STATES={'RUNNING','PRINTING','PREPARE','SLICING','PAUSE','PAUSED'}
 STOP_STATES={'FINISH','FAILED','CANCEL','CANCELED','IDLE'}
+SUCCESS_STATES={'FINISH','FINISHED','COMPLETED','COMPLETE'}
 REMOTE_NAMES={'snapshot':'latest.jpg','clip':'live.mp4','timelapse':'timelapse-latest.mp4'}
-MIMES={'snapshot':'image/jpeg','clip':'video/mp4','timelapse':'video/mp4'}
+MIMES={'snapshot':'image/jpeg','clip':'video/mp4','timelapse':'video/mp4','final_image':'image/jpeg'}
 
 def now_tag(): return datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
 def now_iso(): return datetime.now(timezone.utc).isoformat()
@@ -44,11 +45,11 @@ def _ssh_upload(path:Path,kind:str):
     _meta_write(meta)
     return {'ok':True,'kind':kind,'bytes':path.stat().st_size,'updated_at':stamp,'transport':'ssh'}
 
-def _http_upload(path:Path,kind:str,timeout=30):
+def _http_upload(path:Path,kind:str,timeout=30,params=None):
     if not TOKEN_FILE.exists(): raise RuntimeError('missing local push token')
-    token=TOKEN_FILE.read_text(encoding='utf-8').strip()
+    token=TOKEN_FILE.read_text(encoding='utf-8').strip(); q={'kind':kind}; q.update(params or {})
     with path.open('rb') as f:
-        r=requests.post(INGEST,params={'kind':kind},data=f,headers={'X-PRINTBENCH-TOKEN':token,'Content-Type':MIMES[kind],'User-Agent':'PRINTBENCH-Media/1.1'},timeout=timeout)
+        r=requests.post(INGEST,params=q,data=f,headers={'X-PRINTBENCH-TOKEN':token,'Content-Type':MIMES[kind],'User-Agent':'PRINTBENCH-Media/1.2'},timeout=timeout)
     r.raise_for_status(); out=r.json(); out['transport']='https'; return out
 
 def post_file(path:Path,kind:str,timeout=30):
@@ -60,6 +61,16 @@ def post_file(path:Path,kind:str,timeout=30):
             try:return _ssh_upload(path,kind)
             except Exception as ssh_error: raise RuntimeError(f'https={http_error}; ssh={ssh_error}')
         raise
+
+def capture_final_image(snap:Path):
+    if not snap.exists() or snap.stat().st_size<5000:return None
+    tag=now_tag(); local=MEDIA/f'final-{tag}.jpg'; shutil.copy2(snap,local)
+    result=_http_upload(local,'final_image',timeout=20,params={'session':tag})
+    remote=result.get('file') or local.name
+    try:
+        db=sqlite3.connect(collector.DB); session_tracker.attach_final_image(db,remote); db.close()
+    except Exception as e:print('[PRINTBENCH] MEDIA final image DB warning:',e,flush=True)
+    return {'local':local.name,'remote':remote}
 
 def latest_state():
     try:
@@ -133,9 +144,12 @@ def run_forever(stop_event:threading.Event|None=None):
             except Exception as e:print('[PRINTBENCH] MEDIA frame warning:',e,flush=True)
         if was_active and not active and state in STOP_STATES:
             try:
+                if state in SUCCESS_STATES or (st.get('progress') or 0)>=99.9:
+                    fin=capture_final_image(snap)
+                    if fin:print('[PRINTBENCH] MEDIA final image ready '+fin['remote'],flush=True)
                 t=finalize_timelapse()
                 if t:print('[PRINTBENCH] MEDIA timelapse ready '+t.name,flush=True)
-            except Exception as e:print('[PRINTBENCH] MEDIA timelapse warning:',e,flush=True)
+            except Exception as e:print('[PRINTBENCH] MEDIA completion warning:',e,flush=True)
         was_active=active
     if proc and proc.poll() is None:
         try:proc.terminate(); proc.wait(timeout=5)
