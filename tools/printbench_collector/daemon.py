@@ -6,6 +6,7 @@ import push_live
 import media_worker
 import session_tracker
 import ams_rfid_diag
+import spool_sync
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -31,6 +32,7 @@ def main():
     db = collector.db_open()
     session_tracker.ensure_schema(db)
     ams_rfid_diag.ensure_schema(db)
+    spool_sync.ensure_schema(db)
     serial, code = collector.load_local_bambu_identity()
     topic_report = f'device/{serial}/report'
     topic_req = f'device/{serial}/request'
@@ -60,7 +62,9 @@ def main():
         try:
             raw = json.loads(m.payload.decode('utf-8', 'ignore'))
             collector.save_raw_mqtt(db, m.topic, raw)
-            ams_rfid_diag.observe(db, raw, collector.now_iso())
+            ts=collector.now_iso()
+            ams_rfid_diag.observe(db, raw, ts)
+            spool_sync.observe_ams(db, raw, ts)
             p = raw.get('print') if isinstance(raw, dict) else None
             if isinstance(p, dict) and any(k in p for k in ('gcode_state','mc_percent','nozzle_temper','bed_temper','spd_mag','ams')):
                 n = collector.save_report(db, raw)
@@ -101,6 +105,7 @@ def main():
     last_slice = 0.0
     last_push = 0.0
     last_web_push = 0.0
+    last_spool_sync = 0.0
     while not STOP.wait(1):
         now = time.time()
         if now - last_slice >= 15:
@@ -112,6 +117,13 @@ def main():
         if state['connected'] and now - last_push >= 60:
             client.publish(topic_req, json.dumps({'pushing': {'sequence_id': str(int(now)), 'command': 'pushall'}}))
             last_push = now
+        if now - last_spool_sync >= 300:
+            try:
+                info=spool_sync.sync(db)
+                if int(now) % 900 < 305: print('[PRINTBENCH] SPOOL SYNC '+json.dumps(info,ensure_ascii=False),flush=True)
+            except Exception as e:
+                if int(now)%60<2: print('[PRINTBENCH] spool sync warning:',str(e),flush=True)
+            last_spool_sync=now
         if now - last_web_push >= 5:
             try:
                 result = push_live.push_once()
