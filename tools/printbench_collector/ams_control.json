@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "write_enabled": false,
+  "command_timeout_sec": 8,
+  "generic_filament_ids": {
+    "PLA": "GFL99",
+    "PETG": "GFG99",
+    "TPU": "GFU99",
+    "PVA": "GFS99",
+    "PLA-CF": "GFL98",
+    "PC": "GFC99",
+    "PA": "GFN99",
+    "PA-CF": "GFN98",
+    "ASA": "GFB98",
+    "ABS": "GFB99"
+  }
+}
