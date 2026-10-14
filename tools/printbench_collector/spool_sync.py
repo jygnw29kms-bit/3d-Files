@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 import requests
 import collector
+import ams_control
 
 ROOT=Path(__file__).resolve().parent
 TOKEN_FILE=ROOT/'.spool-admin-token'
@@ -50,6 +51,17 @@ def ensure_schema(db:sqlite3.Connection)->None:
       matched INTEGER NOT NULL,
       UNIQUE(ts,ams_id,slot_id,source_field,observed_uid)
     );
+    CREATE TABLE IF NOT EXISTS ams_action_proposals(
+      id INTEGER PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      ams_id TEXT NOT NULL,
+      slot_id TEXT NOT NULL,
+      spool_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      reason TEXT,
+      payload_json TEXT,
+      UNIQUE(ams_id,slot_id,spool_id,status)
+    );
     CREATE INDEX IF NOT EXISTS idx_ams_spool_matches_slot ON ams_spool_matches(ams_id,slot_id,id);
     ''')
     db.commit()
@@ -92,6 +104,31 @@ def match_uid(db:sqlite3.Connection,uid:Any):
     row=db.execute('SELECT * FROM spool_inventory WHERE UPPER(REPLACE(nfc_uid,\':\',\'\'))=? LIMIT 1',(n.replace(':',''),)).fetchone()
     return dict(row) if row else None
 
+
+def build_proposal(match:dict,ams_id,slot_id):
+    missing=[]
+    material=str(match.get('material') or '').strip().upper()
+    color=match.get('color_hex')
+    lo=match.get('nozzle_temp_min'); hi=match.get('nozzle_temp_max')
+    if not material:missing.append('material')
+    if not color:missing.append('color')
+    if lo is None:missing.append('nozzle_temp_min')
+    if hi is None:missing.append('nozzle_temp_max')
+    if missing:return {'status':'blocked','reason':'missing:'+','.join(missing),'payload':None}
+    try:
+        payload=ams_control.build_filament_setting(ams_id,slot_id,material,color,lo,hi)
+        return {'status':'ready','reason':None,'payload':payload}
+    except Exception as e:
+        return {'status':'blocked','reason':str(e),'payload':None}
+
+
+def store_proposal(db:sqlite3.Connection,ts:str,ams_id,slot_id,match:dict):
+    proposal=build_proposal(match,ams_id,slot_id)
+    db.execute("DELETE FROM ams_action_proposals WHERE ams_id=? AND slot_id=? AND status IN ('ready','blocked')",(str(ams_id),str(slot_id)))
+    db.execute('INSERT INTO ams_action_proposals(created_at,ams_id,slot_id,spool_id,status,reason,payload_json) VALUES(?,?,?,?,?,?,?)',(
+        ts,str(ams_id),str(slot_id),str(match.get('spool_id')),proposal['status'],proposal['reason'],json.dumps(proposal['payload'],ensure_ascii=False,separators=(',',':')) if proposal['payload'] else None))
+    return proposal
+
 def observe_ams(db:sqlite3.Connection,raw:dict,ts:str)->list[dict]:
     ensure_schema(db);p=raw.get('print') if isinstance(raw,dict) else None; top=p.get('ams') if isinstance(p,dict) else None
     if not isinstance(top,dict):return []
@@ -107,11 +144,12 @@ def observe_ams(db:sqlite3.Connection,raw:dict,ts:str)->list[dict]:
                 compact=''.join(c for c in raw_uid.upper() if c in '0123456789ABCDEF')
                 if not compact or compact in ZERO:continue
                 uid=_norm_uid(raw_uid);match=match_uid(db,uid);spool_id=match.get('spool_id') if match else None
+                proposal=store_proposal(db,ts,aid,slot,match) if match else None
                 last=db.execute('SELECT observed_uid,spool_id,matched FROM ams_spool_matches WHERE ams_id=? AND slot_id=? AND source_field=? ORDER BY id DESC LIMIT 1',(aid,slot,field)).fetchone()
                 state=(uid,spool_id,1 if match else 0)
                 if last and tuple(last)==state:continue
                 db.execute('INSERT INTO ams_spool_matches(ts,ams_id,slot_id,source_field,observed_uid,spool_id,matched) VALUES(?,?,?,?,?,?,?)',(ts,aid,slot,field,uid,spool_id,1 if match else 0))
                 db.execute('INSERT INTO events(ts,kind,payload) VALUES(?,?,?)',(ts,'ams_spool_match' if match else 'ams_uid_unmatched',json.dumps({'ams_id':aid,'slot_id':slot,'source_field':field,'spool_id':spool_id},ensure_ascii=False)))
-                found.append({'ams_id':aid,'slot_id':slot,'source_field':field,'spool_id':spool_id,'matched':bool(match)})
+                found.append({'ams_id':aid,'slot_id':slot,'source_field':field,'spool_id':spool_id,'matched':bool(match),'proposal':proposal})
     if found:db.commit()
     return found
