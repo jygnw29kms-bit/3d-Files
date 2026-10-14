@@ -7,6 +7,7 @@ import media_worker
 import session_tracker
 import ams_rfid_diag
 import spool_sync
+import device_info
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -39,6 +40,7 @@ def main():
     session_tracker.ensure_schema(db)
     ams_rfid_diag.ensure_schema(db)
     spool_sync.ensure_schema(db)
+    device_info.ensure_schema(db)
     serial, code = collector.load_local_bambu_identity()
     topic_report = f'device/{serial}/report'
     topic_req = f'device/{serial}/request'
@@ -55,6 +57,8 @@ def main():
         if ok:
             c.subscribe(f'device/{serial}/#')
             c.publish(topic_req, json.dumps({'pushing': {'sequence_id': '0', 'command': 'pushall'}}))
+            c.publish(topic_req, json.dumps(device_info.build_version_request(int(time.time()*1000))))
+            state['last_version_request'] = time.time()
             print('[PRINTBENCH] MQTT connected', flush=True)
         else:
             print('[PRINTBENCH] MQTT connect failed', flush=True)
@@ -71,6 +75,9 @@ def main():
             ts=collector.now_iso()
             ams_rfid_diag.observe(db, raw, ts)
             spool_sync.observe_ams(db, raw, ts)
+            nmods=device_info.observe(db, raw, ts)
+            if nmods:
+                print(f'[PRINTBENCH] DEVICE INFO updated modules={nmods}', flush=True)
             p = raw.get('print') if isinstance(raw, dict) else None
             if isinstance(p, dict) and any(k in p for k in ('gcode_state','mc_percent','nozzle_temper','bed_temper','spd_mag','ams')):
                 n = collector.save_report(db, raw)
@@ -128,6 +135,7 @@ def main():
     last_slice = 0.0
     last_push = 0.0
     last_spool_sync = 0.0
+    state.setdefault('last_version_request',0.0)
     spool_sync_state = {'running': False}
 
     def run_spool_sync():
@@ -157,6 +165,9 @@ def main():
         if state['connected'] and now - last_push >= 60:
             client.publish(topic_req, json.dumps({'pushing': {'sequence_id': str(int(now)), 'command': 'pushall'}}))
             last_push = now
+        if state['connected'] and now - state.get('last_version_request',0.0) >= 21600:
+            client.publish(topic_req, json.dumps(device_info.build_version_request(int(now*1000))))
+            state['last_version_request']=now
         if _env_enabled('PRINTBENCH_SPOOL_SYNC', True) and now - last_spool_sync >= 300 and not spool_sync_state['running']:
             threading.Thread(target=run_spool_sync, daemon=True, name='printbench-spool-sync').start()
             last_spool_sync=now

@@ -101,6 +101,15 @@ def spools():
     return {'items':[dict(x) for x in rows],'matched_count':matches,'ready_proposals':ready,'blocked_proposals':blocked,'uid_exposed':False}
 
 
+
+def firmware():
+    with dbconn() as db:
+        if not _table_exists(db,'device_modules'):
+            return {'items':[],'available':False}
+        rows=db.execute("SELECT name,hw_ver,sw_ver,updated_at FROM device_modules ORDER BY CASE name WHEN 'ota' THEN 0 ELSE 1 END,name").fetchall()
+    return {'items':[dict(x) for x in rows],'available':True}
+
+
 def system_info():
     def cmd(args):
         try:return subprocess.check_output(args,text=True,stderr=subprocess.DEVNULL,timeout=1).strip()
@@ -122,7 +131,7 @@ def system_info():
 def capabilities():
     return {'api':'v1','read_only':True,'printer':'P2S','material_system':'AMS 2 Pro','features':{'telemetry':True,'history':True,
       'sessions':True,'ams_status':True,'rfid_diagnostics':True,'external_tag_observations':True,'spool_inventory':True,
-      'camera_browser_bridge':camera_fresh(),'camera_mjpeg':camera_fresh(),'reader_serial_bridge':True,'ams_writes':False,'raw_uid_browser':False}}
+      'camera_browser_bridge':camera_fresh(),'camera_mjpeg':camera_fresh(),'reader_serial_bridge':True,'device_firmware':True,'ams_writes':False,'raw_uid_browser':False}}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -176,6 +185,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if path==API_PREFIX+'/external-tags':return self._json(external_tags(q.get('limit',['16'])[0]))
                 if path==API_PREFIX+'/spools':return self._json(spools())
                 if path==API_PREFIX+'/system':return self._json(system_info())
+                if path==API_PREFIX+'/firmware':return self._json(firmware())
                 if path==API_PREFIX+'/capabilities':return self._json(capabilities())
                 return self._json({'error':'not_found'},404)
             except Exception:return self._json({'error':'internal'},500)
