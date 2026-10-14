@@ -4,6 +4,7 @@ import paho.mqtt.client as mqtt
 import collector
 import push_live
 import media_worker
+import session_tracker
 
 STOP = threading.Event()
 LOCK_SOCKET = None
@@ -27,6 +28,7 @@ def main():
         print('[PRINTBENCH] Collector already running; exiting', flush=True)
         return
     db = collector.db_open()
+    session_tracker.ensure_schema(db)
     serial, code = collector.load_local_bambu_identity()
     topic_report = f'device/{serial}/report'
     topic_req = f'device/{serial}/request'
@@ -59,6 +61,7 @@ def main():
             p = raw.get('print') if isinstance(raw, dict) else None
             if isinstance(p, dict) and any(k in p for k in ('gcode_state','mc_percent','nozzle_temper','bed_temper','spd_mag','ams')):
                 n = collector.save_report(db, raw)
+                session_tracker.observe(db, n)
                 state['messages'] += 1
                 if state['messages'] % 12 == 1:
                     print('[PRINTBENCH] LIVE ' + json.dumps({
