@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 
 ACTIVE_STATES = {
@@ -10,7 +10,7 @@ ACTIVE_STATES = {
 }
 SUCCESS_STATES = {'FINISH', 'FINISHED', 'COMPLETED', 'COMPLETE'}
 FAIL_STATES = {'FAILED', 'FAIL', 'ERROR'}
-CANCEL_STATES = {'CANCELLED', 'CANCELED', 'ABORTED', 'STOPPED'}
+CANCEL_STATES = {'CANCEL', 'CANCELLED', 'CANCELED', 'ABORTED', 'STOPPED'}
 IDLE_STATES = {'IDLE'}
 
 
@@ -61,9 +61,12 @@ def ensure_schema(db):
     db.commit()
 
 
-def attach_final_image(db, image_name):
+def attach_final_image(db, image_name, max_age_seconds=300):
     ensure_schema(db)
-    row=db.execute("SELECT id FROM print_sessions WHERE outcome='success' ORDER BY id DESC LIMIT 1").fetchone()
+    cutoff=(datetime.now(timezone.utc)-timedelta(seconds=max(30,int(max_age_seconds)))).isoformat()
+    row=db.execute("""SELECT id FROM print_sessions
+        WHERE outcome='success' AND final_image IS NULL AND ended_at IS NOT NULL AND ended_at>=?
+        ORDER BY id DESC LIMIT 1""",(cutoff,)).fetchone()
     if not row:return None
     db.execute('UPDATE print_sessions SET final_image=? WHERE id=?',(str(image_name),row[0]))
     db.commit(); return row[0]
@@ -164,13 +167,14 @@ def observe(db, report):
 
     _update(db, session, report)
 
-    if state in SUCCESS_STATES or (progress is not None and progress >= 99.9):
-        _finish(db, session, report, 'success')
-    elif state in FAIL_STATES:
+    effective_max=max(float(session.get('max_progress') or 0), float(progress or 0))
+    if state in FAIL_STATES:
         _finish(db, session, report, 'failed')
     elif state in CANCEL_STATES:
         _finish(db, session, report, 'cancelled')
-    elif state in IDLE_STATES and (session.get('max_progress') or 0) > 0:
+    elif state in SUCCESS_STATES or (progress is not None and progress >= 99.9):
+        _finish(db, session, report, 'success')
+    elif state in IDLE_STATES and effective_max > 0:
         _finish(db, session, report, 'interrupted')
 
 

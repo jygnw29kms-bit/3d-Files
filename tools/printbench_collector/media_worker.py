@@ -16,9 +16,10 @@ def _win_no_window_kwargs():
     return {'creationflags': flags, 'startupinfo': startupinfo}
 MEDIA=ROOT/'media'; FRAMES=MEDIA/'timelapse_frames'; TOKEN_FILE=ROOT/'.push-token'
 INGEST='https://www.dezender.de/3d-druck/media-ingest.php'
-ACTIVE_STATES={'RUNNING','PRINTING','PREPARE','SLICING','PAUSE','PAUSED'}
-STOP_STATES={'FINISH','FAILED','CANCEL','CANCELED','IDLE'}
+ACTIVE_STATES={'RUNNING','PRINTING','PREPARE','PREPARING','SLICING','PAUSE','PAUSED','HEATING','BED_LEVELING','CALIBRATING'}
 SUCCESS_STATES={'FINISH','FINISHED','COMPLETED','COMPLETE'}
+FAILURE_STATES={'FAILED','FAIL','ERROR','CANCEL','CANCELLED','CANCELED','ABORTED','STOPPED'}
+STOP_STATES=SUCCESS_STATES|FAILURE_STATES|{'IDLE'}
 REMOTE_NAMES={'snapshot':'latest.jpg','clip':'live.mp4','timelapse':'timelapse-latest.mp4'}
 MIMES={'snapshot':'image/jpeg','clip':'video/mp4','timelapse':'video/mp4','final_image':'image/jpeg'}
 
@@ -73,12 +74,22 @@ def post_file(path:Path,kind:str,timeout=30):
 def capture_final_image(snap:Path):
     if not snap.exists() or snap.stat().st_size<5000:return None
     tag=now_tag(); local=MEDIA/f'final-{tag}.jpg'; shutil.copy2(snap,local)
-    result=_http_upload(local,'final_image',timeout=20,params={'session':tag})
-    remote=result.get('file') or local.name
+    remote=f'final-{tag}.jpg'; transport='https'
     try:
-        db=sqlite3.connect(collector.DB); session_tracker.attach_final_image(db,remote); db.close()
+        result=_http_upload(local,'final_image',timeout=20,params={'session':tag})
+        remote=result.get('file') or remote
+    except Exception:
+        if not server_transport.available(): raise
+        server_transport.put_file_atomic(local,'media/'+remote,timeout=60)
+        transport='ssh'
+        base=server_transport.REMOTE_ROOT+'/media'
+        try:server_transport.exec_remote(f"cd {shlex.quote(base)} && ls -1t final-*.jpg 2>/dev/null | tail -n +101 | xargs -r rm -f --",timeout=15)
+        except Exception:pass
+    try:
+        db=sqlite3.connect(collector.DB); linked=session_tracker.attach_final_image(db,remote); db.close()
+        if linked is None: print('[PRINTBENCH] MEDIA final image has no eligible recent success session',flush=True)
     except Exception as e:print('[PRINTBENCH] MEDIA final image DB warning:',e,flush=True)
-    return {'local':local.name,'remote':remote}
+    return {'local':local.name,'remote':remote,'transport':transport}
 
 def latest_state():
     try:
@@ -150,14 +161,18 @@ def run_forever(stop_event:threading.Event|None=None):
         if active and now-last_frame>=15:
             try:add_timelapse_frame(snap); last_frame=now
             except Exception as e:print('[PRINTBENCH] MEDIA frame warning:',e,flush=True)
-        if was_active and not active and state in STOP_STATES:
-            try:
-                if state in SUCCESS_STATES or (st.get('progress') or 0)>=99.9:
+        completion=(state in STOP_STATES) or ((st.get('progress') or 0)>=99.9)
+        if was_active and not active and completion:
+            success=(state not in FAILURE_STATES) and (state in SUCCESS_STATES or (st.get('progress') or 0)>=99.9)
+            if success:
+                try:
                     fin=capture_final_image(snap)
                     if fin:print('[PRINTBENCH] MEDIA final image ready '+fin['remote'],flush=True)
+                except Exception as e:print('[PRINTBENCH] MEDIA final image warning:',e,flush=True)
+            try:
                 t=finalize_timelapse()
                 if t:print('[PRINTBENCH] MEDIA timelapse ready '+t.name,flush=True)
-            except Exception as e:print('[PRINTBENCH] MEDIA completion warning:',e,flush=True)
+            except Exception as e:print('[PRINTBENCH] MEDIA timelapse completion warning:',e,flush=True)
         was_active=active
     if proc and proc.poll() is None:
         try:proc.terminate(); proc.wait(timeout=5)
