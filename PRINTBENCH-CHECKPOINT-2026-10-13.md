@@ -179,3 +179,20 @@
 7. If AMS exposes a matching non-zero UID, connect `UID -> spool -> ams_filament_setting`, still with safety checks for slot/material/printer state.
 8. Only after a controlled dry-run and one confirmed hardware test consider `write_enabled=true`.
 9. If AMS does not expose NTAG UID, proceed with the planned bus-level V2 capture instead of guessing.
+## 2026-10-14 — PRINTBENCH Raspberry Pi Bridge image 1.0.0
+
+- Built a dedicated flashable Raspberry Pi OS Lite 64-bit image from the official 2026-10-06 image.
+- Final file (local, intentionally not committed): `pi-image/PRINTBENCH-Pi-Bridge-1.0.0-arm64.img.xz`.
+- Compressed size: 708,381,824 bytes; SHA-256 `062DFE68E250EBE0E349D07B100F523C7EA72E5C613FDCD009639D4FB05E71CB`.
+- Uncompressed image SHA-256 `D82C1F37769000B11E2A49AA98DD80F954613D755CC3DC9EA4349623344F2B49`.
+- Full decompression verification passed: decompressed `.xz` hash exactly matches the `.img` hash.
+- Hostname `printbench-pi`, mDNS `printbench-pi.local`, SSH user `printbench`.
+- Password SSH and root SSH are disabled; a dedicated Ed25519 public key is embedded. The private key exists only in the local ignored `pi-image/keys/` directory.
+- First boot expects Ethernet/DHCP and provisions SSH, avahi/mDNS, nftables, diagnostics packages, ffmpeg, MQTT tools, I2C/SPI tools, Python environment and systemd units.
+- Collector bootstrap archive is checksummed and pinned to collector commit `c530ffa`.
+- Debian 13 native packages `python3-paho-mqtt`, `python3-watchdog`, `python3-requests` are used through a system-site-packages venv; pip is fallback only.
+- Collector remains fail-closed before pairing: no `/etc/printbench/bambu.json` means no collector start.
+- Pi defaults to local diagnostics only: media worker OFF, slicer scan OFF, web push OFF, spool sync OFF. These are enabled only after controlled configuration.
+- Helper commands after boot: `printbench-status`, `sudo printbench-pair`, `journalctl -u printbench-collector.service -f`.
+- Build scripts/docs committed under `pi-image/`; raw images, keys, generated cloud-init files and base image are ignored.
+- Relevant commits: `c530ffa` (portable secure collector config), `e30be2b` (Pi image build system), `89375e0` (Debian ARM64 dependency hardening).
