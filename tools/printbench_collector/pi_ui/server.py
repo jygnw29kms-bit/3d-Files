@@ -125,6 +125,8 @@ def capabilities():
       'spool_inventory':True,'camera_browser_bridge':False,'ams_writes':False,'raw_uid_browser':False}}
 
 class Handler(SimpleHTTPRequestHandler):
+    server_version='PRINTBENCH'
+    sys_version=''
     def end_headers(self):
         self.send_header('X-Content-Type-Options','nosniff'); self.send_header('X-Frame-Options','DENY')
         self.send_header('Referrer-Policy','no-referrer'); self.send_header('Permissions-Policy','camera=(), microphone=(), geolocation=()')
@@ -158,3 +160,5 @@ if __name__=='__main__':
     os.chdir(STATIC); host=os.environ.get('PRINTBENCH_UI_HOST','0.0.0.0'); port=int(os.environ.get('PRINTBENCH_UI_PORT','8080'))
     print(f'[PRINTBENCH UI] http://{host}:{port}/',flush=True)
     ThreadingHTTPServer((host,port),Handler).serve_forever()
+
+
