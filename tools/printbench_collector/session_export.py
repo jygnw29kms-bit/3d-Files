@@ -21,7 +21,7 @@ def snapshot(limit=100):
           SELECT id,started_at,ended_at,state,outcome,start_progress,end_progress,max_progress,
                  start_layer,end_layer,max_layer,origin_path,filament_type,filament_vendor,
                  filament_profile,planned_filament_g,planned_filament_m,planned_time_sec,
-                 actual_time_sec,final_print_state,fail_reason,media_key
+                 actual_time_sec,final_print_state,fail_reason,media_key,final_image
           FROM print_sessions ORDER BY id DESC LIMIT ?
         ''', (int(limit),)).fetchall()
         sessions = []
