@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import json, os, sqlite3, socket, subprocess
 from datetime import datetime, timezone, timedelta
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -160,5 +160,3 @@ if __name__=='__main__':
     os.chdir(STATIC); host=os.environ.get('PRINTBENCH_UI_HOST','0.0.0.0'); port=int(os.environ.get('PRINTBENCH_UI_PORT','8080'))
     print(f'[PRINTBENCH UI] http://{host}:{port}/',flush=True)
     ThreadingHTTPServer((host,port),Handler).serve_forever()
-
-
