@@ -6,9 +6,9 @@ import paho.mqtt.client as mqtt
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'printbench.db'
-BAMBU_CONF = Path.home() / 'AppData' / 'Roaming' / 'BambuStudio' / 'BambuStudio.conf'
-BAMBU_TEMP = Path(os.environ.get('LOCALAPPDATA', '')) / 'Temp' / 'bamboo_model'
-P2S_HOST = '192.168.178.110'
+BAMBU_CONF = Path(os.environ.get('PRINTBENCH_BAMBU_CONFIG', '')) if os.environ.get('PRINTBENCH_BAMBU_CONFIG') else (Path.home() / 'AppData' / 'Roaming' / 'BambuStudio' / 'BambuStudio.conf')
+BAMBU_TEMP = Path(os.environ.get('PRINTBENCH_SLICER_TEMP', '')) if os.environ.get('PRINTBENCH_SLICER_TEMP') else (Path(os.environ.get('LOCALAPPDATA', '')) / 'Temp' / 'bamboo_model')
+P2S_HOST = os.environ.get('PRINTBENCH_P2S_HOST', '192.168.178.110').strip() or '192.168.178.110'
 
 
 def now_iso():
@@ -17,12 +17,14 @@ def now_iso():
 
 def load_local_bambu_identity():
     raw = BAMBU_CONF.read_text(encoding='utf-8', errors='ignore')
-    data, _ = json.JSONDecoder().raw_decode(raw.lstrip())
+    data, _ = json.JSONDecoder().raw_decode(raw.lstrip('\ufeff \\t\\r\\n'))
+    if isinstance(data, dict) and data.get('serial') and data.get('access_code') and isinstance(data.get('access_code'), str):
+        return str(data['serial']).strip(), str(data['access_code']).strip()
     access = data.get('access_code') or {}
-    if not access:
-        raise RuntimeError('Bambu Studio has no LAN access-code entry')
-    serial, code = next(iter(access.items()))
-    return serial, code
+    if isinstance(access, dict) and access:
+        serial, code = next(iter(access.items()))
+        return str(serial).strip(), str(code).strip()
+    raise RuntimeError(f'No usable Bambu LAN identity in {BAMBU_CONF}')
 
 
 def db_open():

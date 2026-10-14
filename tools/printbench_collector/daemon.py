@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, signal, socket, ssl, threading, time
+import json, os, signal, socket, ssl, threading, time
 import paho.mqtt.client as mqtt
 import collector
 import push_live
@@ -10,6 +10,12 @@ import spool_sync
 
 STOP = threading.Event()
 LOCK_SOCKET = None
+
+def _env_enabled(name: str, default: bool = True) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() not in {'0','false','no','off','disabled'}
 
 
 def acquire_singleton():
@@ -94,13 +100,17 @@ def main():
     except Exception:
         pass
 
-    collector.ingest_latest_slicer(db)
+    if _env_enabled('PRINTBENCH_SLICER_SCAN', True):
+        collector.ingest_latest_slicer(db)
     client.connect(collector.P2S_HOST, 8883, keepalive=30)
     client.loop_start()
     print('[PRINTBENCH] Collector started', flush=True)
-    media_thread = threading.Thread(target=media_worker.run_forever, args=(STOP,), daemon=True, name='printbench-media')
-    media_thread.start()
-    print('[PRINTBENCH] Media worker started', flush=True)
+    if _env_enabled('PRINTBENCH_MEDIA_WORKER', True):
+        media_thread = threading.Thread(target=media_worker.run_forever, args=(STOP,), daemon=True, name='printbench-media')
+        media_thread.start()
+        print('[PRINTBENCH] Media worker started', flush=True)
+    else:
+        print('[PRINTBENCH] Media worker disabled', flush=True)
 
     last_slice = 0.0
     last_push = 0.0
@@ -108,7 +118,7 @@ def main():
     last_spool_sync = 0.0
     while not STOP.wait(1):
         now = time.time()
-        if now - last_slice >= 15:
+        if _env_enabled('PRINTBENCH_SLICER_SCAN', True) and now - last_slice >= 15:
             try:
                 collector.ingest_latest_slicer(db)
             except Exception as e:
@@ -117,14 +127,14 @@ def main():
         if state['connected'] and now - last_push >= 60:
             client.publish(topic_req, json.dumps({'pushing': {'sequence_id': str(int(now)), 'command': 'pushall'}}))
             last_push = now
-        if now - last_spool_sync >= 300:
+        if _env_enabled('PRINTBENCH_SPOOL_SYNC', True) and now - last_spool_sync >= 300:
             try:
                 info=spool_sync.sync(db)
                 if int(now) % 900 < 305: print('[PRINTBENCH] SPOOL SYNC '+json.dumps(info,ensure_ascii=False),flush=True)
             except Exception as e:
                 if int(now)%60<2: print('[PRINTBENCH] spool sync warning:',str(e),flush=True)
             last_spool_sync=now
-        if now - last_web_push >= 5:
+        if _env_enabled('PRINTBENCH_WEB_PUSH', True) and now - last_web_push >= 5:
             try:
                 result = push_live.push_once()
                 if int(now) % 30 < 5:
