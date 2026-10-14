@@ -11,6 +11,7 @@ if (!hash_equals($expected, hash('sha256', $token))) { http_response_code(403); 
 $kind = strtolower(trim((string)($_GET['kind'] ?? '')));
 $map = [
  'snapshot'=>['latest.jpg','image/jpeg',2000000],
+ 'final_image'=>[null,'image/jpeg',3000000],
  'clip'=>['live.mp4','video/mp4',50000000],
  'timelapse'=>['timelapse-latest.mp4','video/mp4',200000000],
  'native_video'=>[null,'video/mp4',200000000],
@@ -23,6 +24,11 @@ if ($kind === 'native_video' || $kind === 'native_thumb') {
   $pattern = $kind === 'native_video' ? '/^video_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.mp4$/' : '/^video_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}(?:_mini)?\.jpg$/';
   if (!preg_match($pattern, $rawName)) { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'name']); exit; }
   $name = 'native/' . $rawName;
+}
+if ($kind === 'final_image') {
+  $session = preg_replace('/[^A-Za-z0-9_-]/','',(string)($_GET['session'] ?? ''));
+  if ($session === '') $session = gmdate('Ymd-His');
+  $name = 'final-' . $session . '.jpg';
 }
 $len = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
 if ($len <= 0 || $len > $max) { http_response_code(413); echo json_encode(['ok'=>false,'error'=>'size']); exit; }
@@ -40,9 +46,12 @@ if ($kind === 'timelapse') {
   $archive = $dir . '/timelapse-' . gmdate('Ymd-His') . '.mp4'; @copy($dst, $archive); @chmod($archive, 0644);
   $old = glob($dir . '/timelapse-*.mp4') ?: []; usort($old, fn($a,$b)=>filemtime($b)<=>filemtime($a)); foreach(array_slice($old,12) as $f) @unlink($f);
 }
+if ($kind === 'final_image') {
+  $old = glob($dir . '/final-*.jpg') ?: []; usort($old, fn($a,$b)=>filemtime($b)<=>filemtime($a)); foreach(array_slice($old,100) as $f) @unlink($f);
+}
 $metaFile = $dir . '/meta.json'; $meta = [];
 if (is_file($metaFile)) { $m = json_decode((string)file_get_contents($metaFile), true); if (is_array($m)) $meta=$m; }
 if ($kind !== 'native_video' && $kind !== 'native_thumb') $meta[$kind] = ['file'=>$name,'updated_at'=>gmdate(DATE_ATOM),'bytes'=>strlen($raw),'mime'=>$mime];
 $meta['updated_at'] = gmdate(DATE_ATOM);
 file_put_contents($metaFile, json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT), LOCK_EX); @chmod($metaFile,0644);
-echo json_encode(['ok'=>true,'kind'=>$kind,'bytes'=>strlen($raw),'updated_at'=>$meta[$kind]['updated_at']]);
+echo json_encode(['ok'=>true,'kind'=>$kind,'file'=>$name,'bytes'=>strlen($raw),'updated_at'=>$meta[$kind]['updated_at']]);
