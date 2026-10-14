@@ -2,7 +2,7 @@ from pathlib import Path
 import struct
 from pyfatfs.PyFatFS import PyFatFS
 
-base = Path(r"C:\Users\dezen\Desktop\3d-Files\pi-image")
+base = Path(__file__).resolve().parent
 img = base / "PRINTBENCH-Pi-Bridge-arm64.img"
 
 with img.open("rb") as f:
@@ -32,7 +32,7 @@ try:
     fs.writebytes("printbench-collector.tar.gz", archive.read_bytes())
 
     marker = (
-        "PRINTBENCH Pi Bridge 1.0.0\n"
+        "PRINTBENCH Pi Bridge 1.1.0-dev\n"
         "Base: Raspberry Pi OS Lite 64-bit 2026-10-06\n"
         "Collector: c530ffa\n"
         "Hostname: printbench-pi.local\n"

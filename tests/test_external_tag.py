@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'printbench_collector'))
 import sqlite3
@@ -14,6 +14,7 @@ def test_external_tag_match():
     db.commit()
     out=external_tag.observe(db,uid='04A1B2C3D4E5F6',ams_id=0,slot_id=3,reader_id='test',tag_type='ntag216',ts='2026-10-14T00:00:00+00:00')
     assert out['matched'] is True and out['spool_id']=='S1'
+    assert 'uid' not in out
     row=db.execute('SELECT uid,matched,spool_id FROM external_tag_observations').fetchone()
     assert tuple(row)==('04:A1:B2:C3:D4:E5:F6',1,'S1')
 

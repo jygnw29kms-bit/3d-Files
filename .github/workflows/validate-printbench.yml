@@ -1,0 +1,40 @@
+name: Validate PRINTBENCH
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-and-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check pytest paho-mqtt requests watchdog
+      - name: Validate product contract
+        run: python tools/validate_product_contract.py
+      - name: Test external tag and reader boundaries
+        run: python -m pytest -q tests/test_external_tag.py tests/test_reader_contract.py tests/test_reader_serial.py
+      - name: Check Pi Python syntax
+        run: |
+          python -m py_compile \
+            tools/printbench_collector/camera_bridge.py \
+            tools/printbench_collector/reader_contract.py \
+            tools/printbench_collector/reader_serial.py \
+            tools/printbench_collector/external_tag.py \
+            tools/printbench_collector/pi_ui/server.py
+      - name: Check Pi UI JavaScript
+        run: node --check tools/printbench_collector/pi_ui/static/app.js
+      - name: Check first-boot shell syntax
+        run: bash -n pi-image/printbench-firstboot.sh

@@ -27,6 +27,8 @@ packages:
   - python3-paho-mqtt
   - python3-watchdog
   - python3-requests
+  - python3-av
+  - python3-serial
   - python3-spidev
   - python3-gpiozero
   - ca-certificates

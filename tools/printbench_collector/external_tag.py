@@ -1,8 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import argparse, json, sqlite3
 from typing import Any
 import collector
 import spool_sync
+import reader_contract
 
 
 def ensure_schema(db:sqlite3.Connection)->None:
@@ -29,9 +30,8 @@ def ensure_schema(db:sqlite3.Connection)->None:
 def observe(db:sqlite3.Connection, *, uid:Any, ams_id:Any, slot_id:Any, reader_id='external-nfc', tag_type='ntag', parsed:dict|None=None, ts:str|None=None)->dict:
     ensure_schema(db)
     ts=ts or collector.now_iso()
-    norm=spool_sync._norm_uid(uid)
-    if not norm or norm.replace(':','') in spool_sync.ZERO:
-        raise ValueError('non-zero NFC UID required')
+    checked=reader_contract.validate(reader_contract.TagObservation(str(reader_id),str(ams_id),str(slot_id),str(uid),str(tag_type or 'unknown'),parsed or {}))
+    reader_id,ams_id,slot_id,norm,tag_type,parsed=checked.reader_id,checked.ams_id,checked.slot_id,checked.uid,checked.tag_type,checked.payload
     match=spool_sync.match_uid(db,norm)
     spool_id=match.get('spool_id') if match else None
     proposal=spool_sync.store_proposal(db,ts,ams_id,slot_id,match) if match else None
@@ -39,9 +39,9 @@ def observe(db:sqlite3.Connection, *, uid:Any, ams_id:Any, slot_id:Any, reader_i
     db.execute('INSERT OR IGNORE INTO external_tag_observations(ts,reader_id,ams_id,slot_id,uid,tag_type,payload_json,spool_id,matched) VALUES(?,?,?,?,?,?,?,?,?)',
                (ts,str(reader_id),str(ams_id),str(slot_id),norm,str(tag_type or ''),payload,spool_id,1 if match else 0))
     db.execute('INSERT INTO events(ts,kind,payload) VALUES(?,?,?)',
-               (ts,'external_tag_match' if match else 'external_tag_unmatched',json.dumps({'reader_id':reader_id,'ams_id':str(ams_id),'slot_id':str(slot_id),'uid':norm,'tag_type':tag_type,'spool_id':spool_id},ensure_ascii=False)))
+               (ts,'external_tag_match' if match else 'external_tag_unmatched',json.dumps({'reader_id':reader_id,'ams_id':str(ams_id),'slot_id':str(slot_id),'tag_type':tag_type,'spool_id':spool_id},ensure_ascii=False)))
     db.commit()
-    return {'ts':ts,'reader_id':str(reader_id),'ams_id':str(ams_id),'slot_id':str(slot_id),'uid':norm,'tag_type':str(tag_type or ''),'matched':bool(match),'spool_id':spool_id,'proposal':proposal}
+    return {'ts':ts,'reader_id':str(reader_id),'ams_id':str(ams_id),'slot_id':str(slot_id),'tag_type':str(tag_type or ''),'matched':bool(match),'spool_id':spool_id,'proposal':proposal}
 
 
 def main()->None:

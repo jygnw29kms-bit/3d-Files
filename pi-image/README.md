@@ -1,60 +1,78 @@
 # PRINTBENCH Pi Bridge Image
 
-Custom Raspberry Pi OS Lite 64-bit image for the PRINTBENCH / DEZENDER 3D-printing project.
+Reproduzierbares Raspberry-Pi-OS-Lite-64-bit-Image für PRINTBENCH Studio, P2S und AMS 2 Pro.
 
-## Image
+## Versionen
+
+Das bereits gebaute und vollständig verifizierte Artefakt bleibt **1.0.0**:
 
 `PRINTBENCH-Pi-Bridge-1.0.0-arm64.img.xz`
 
-Base: Raspberry Pi OS Lite 64-bit, image reference 2026-10-06.
-Target: Raspberry Pi 3 / 4 / 5 and Zero 2-class 64-bit boards supported by the upstream image.
-Storage: 8 GB minimum; 16 GB or larger recommended for logs, packages and future captures.
+Seine Bytegrößen und SHA256-Werte bleiben unverändert in `manifest.json` dokumentiert. Der aktuelle Image-Quellstand ist **1.1.0-dev** und ergänzt die lokale Pi-UI, die credential-sichere Kamera-Bridge und deren Abhängigkeiten. Ein neues Release-Manifest wird erst erzeugt, wenn daraus tatsächlich ein neues Image gebaut und vollständig verifiziert wurde.
+
+Basis: Raspberry Pi OS Lite 64-bit, Referenz 2026-10-06.
+Ziel: 64-bit Raspberry-Pi-Boards, die vom Upstream-Image unterstützt werden. 8 GB sind das Minimum; 16 GB oder mehr werden empfohlen.
 
 ## First boot
 
-1. Flash the `.img.xz` with Raspberry Pi Imager using **Use custom**.
-2. Do **not** apply Raspberry Pi Imager OS customisation settings; this image already contains its own cloud-init configuration.
-3. Connect Ethernet before the first boot.
-4. Power on the Pi and allow roughly 5-15 minutes for the first boot. Package updates may make the first boot longer.
-5. The hostname is `printbench-pi` and mDNS name is `printbench-pi.local`.
-6. SSH password login and root login are disabled. The local image SSH key is required.
+1. Verifiziertes `.img.xz` mit Raspberry Pi Imager über **Use custom** schreiben.
+2. Keine zusätzlichen Raspberry-Pi-Imager-OS-Anpassungen anwenden; Cloud-init ist bereits enthalten.
+3. Ethernet vor dem ersten Start verbinden.
+4. Für den ersten Boot inklusive Paketinstallation etwa 5–15 Minuten einplanen.
+5. Hostname: `printbench-pi`; mDNS: `printbench-pi.local`.
+6. SSH-Passwortlogin und Root-SSH sind deaktiviert; Zugriff erfolgt per Schlüssel.
+7. Danach `sudo printbench-pair` ausführen, um P2S-IP, Seriennummer und LAN-Access-Code lokal einzutragen.
+
+## Dienste im 1.1.0-dev-Quellstand
+
+- `printbench-collector.service` – MQTT-Telemetrie, AMS-/Sessiondaten
+- `printbench-ui.service` – lokale read-only HMI auf TCP 8080
+- `printbench-camera.service` – adaptive RTSPS/MJPEG-Bridge über PyAV
+- `printbench-reader.service` – optionaler USB-Serial-NFC-Reader (erst nach Hardware-Verifikation aktivieren)
+- `printbench-collector.path` – startet den Collector nach vorhandenem Pairing
+
+Die UI darf vor dem Pairing laufen und zeigt dann Offline-/Diagnosestatus. Collector und Kamera benötigen `/etc/printbench/bambu.json`. Kamera-Snapshots liegen ausschließlich flüchtig unter `/run/printbench-camera`.
 
 ## Security
 
-- SSH public-key authentication only.
-- Root SSH login disabled.
-- Password authentication disabled.
-- nftables input firewall: established traffic, ICMP, DHCP/mDNS and SSH from private LAN ranges only.
-- No Bambu serial number, LAN access code, PRINTBENCH push token or spool admin token is embedded in the image.
-- The collector is not started until `/etc/printbench/bambu.json` exists.
-- Camera/media worker, web push, slicer scan and private spool sync start disabled on the Pi.
+- SSH ausschließlich per Public Key; Root- und Passwortlogin deaktiviert.
+- nftables Input-Policy `drop`.
+- SSH nur aus privaten Netzen; Pi-UI TCP 8080 im aktuellen Zielnetz `192.168.178.0/24`.
+- Keine P2S-Zugangsdaten, Web-Tokens, privaten SSH-Schlüssel oder rohen RFID-UIDs im Image-Quellrepo.
+- Die Browser-API ist read-only und gibt keine Printer-Credentials aus.
+- Die Kamera nutzt PyAV im selben Prozess; der credential-haltige RTSPS-URI wird nicht als Child-Process-Argument exponiert.
+- AMS-Schreibzugriffe bleiben standardmäßig deaktiviert.
 
-## PRINTBENCH software
+## Reproduzierbarer Bootstrap
 
-The boot partition contains a checksummed bootstrap archive of `tools/printbench_collector` from Git commit `c530ffa`.
-The first-boot script installs it under `/opt/printbench/repo/tools/printbench_collector`, creates `/opt/printbench/venv` with Debian system packages for paho-mqtt/watchdog/requests (pip only as fallback), and registers the collector as a systemd service.
+`python build_bootstrap.py` erstellt `printbench-collector.tar.gz` aus dem aktuellen Collector-Quellbaum, schließt Runtime/Secrets/Caches aus, berechnet SHA256 und trägt Commit/Hash in `printbench-firstboot.sh` ein. Das Archiv ist ein Buildartefakt und bleibt Git-ignored.
 
-Useful commands after login:
+Vor einem Image-Build müssen mindestens folgende Prüfungen erfolgreich sein:
+
+```bash
+bash -n printbench-firstboot.sh
+python ../tools/validate_product_contract.py
+```
+
+## Pakete
+
+Neben SSH/Avahi/nftables/Python sind u. a. `python3-paho-mqtt`, `python3-watchdog`, `python3-requests`, `python3-av`, `python3-spidev`, `python3-gpiozero`, ffmpeg, sqlite3 und Diagnosewerkzeuge vorgesehen. `python3-av` wird von der Kamera-Bridge verwendet; `python3-serial` ist für den optionalen ESP32/USB-NFC-Reader vorgesehen. ffmpeg bleibt für Medienanalyse/Kompatibilitätswerkzeuge verfügbar.
+
+## Nützliche Befehle
 
 ```bash
 printbench-status
 sudo printbench-pair
 systemctl status printbench-collector.service
+systemctl status printbench-ui.service
+systemctl status printbench-camera.service
 journalctl -u printbench-collector.service -f
 ```
 
-`printbench-pair` prompts for the P2S IP, printer serial number and LAN access code. The access code is entered silently and is written only to `/etc/printbench/bambu.json` with restricted permissions.
+## Hardwarevorbereitung
 
-## Hardware preparation
+I2C und SPI werden für externe RFID-/NTAG-Reader und spätere Diagnosepfade aktiviert. Serielle Einstellungen werden erst geändert, wenn ein konkret validierter Hardwarepfad dies erfordert.
 
-I2C and SPI are enabled for later diagnostics. The serial console remains enabled as a recovery path. We will only change UART/serial settings when the AMS bus test actually requires it.
+## Lokal/Buildartefakte
 
-## Files kept local and not committed
-
-- final `.img` / `.img.xz`
-- SHA256 files
-- generated SSH private key
-- generated cloud-init `user-data`
-- official Raspberry Pi base image
-
-Do not commit secrets or runtime databases.
+Nicht committen: `.img`, `.img.xz`, SHA-Dateien, generierte private SSH-Schlüssel, erzeugtes Cloud-init `user-data`, offizielle Raspberry-Pi-Basisimages, `printbench-collector.tar.gz`, Runtime-Datenbanken oder Credentials.

@@ -2,7 +2,7 @@
 set -euo pipefail
 umask 027
 
-IMAGE_VERSION="PRINTBENCH-Pi-Bridge 1.0.0"
+IMAGE_VERSION="PRINTBENCH-Pi-Bridge 1.1.0-dev"
 COLLECTOR_COMMIT="c530ffa"
 COLLECTOR_SHA="0A05C2A8448B3C3EB6DB90A26EC0C0793CA09D3BC4B35BC0537D08A568EF9EF8"
 BOOT_ARCHIVE="/boot/firmware/printbench-collector.tar.gz"
@@ -78,6 +78,7 @@ table inet printbench_filter {
     ip saddr 10.0.0.0/8 tcp dport 22 accept
     ip saddr 172.16.0.0/12 tcp dport 22 accept
     ip saddr 192.168.0.0/16 tcp dport 22 accept
+    ip saddr 192.168.178.0/24 tcp dport 8080 accept
     ip6 saddr fe80::/10 tcp dport 22 accept
     ip6 saddr fc00::/7 tcp dport 22 accept
   }
@@ -147,6 +148,9 @@ if ! /opt/printbench/venv/bin/python -c "import paho.mqtt.client, requests, watc
   /opt/printbench/venv/bin/pip install -r /opt/printbench/repo/tools/printbench_collector/requirements.txt
 fi
 chown -R printbench:printbench /opt/printbench/repo /var/lib/printbench
+install -o root -g root -m 0644 /opt/printbench/repo/tools/printbench_collector/pi_ui/printbench-ui.service /etc/systemd/system/printbench-ui.service
+install -o root -g root -m 0644 /opt/printbench/repo/tools/printbench_collector/pi_ui/printbench-camera.service /etc/systemd/system/printbench-camera.service
+install -o root -g root -m 0644 /opt/printbench/repo/tools/printbench_collector/pi_ui/printbench-reader.service /etc/systemd/system/printbench-reader.service
 
 cat >/usr/local/sbin/printbench-pair <<'EOF'
 #!/bin/bash
@@ -170,6 +174,8 @@ chmod 0640 /etc/printbench/bambu.json
 sed -i "s/^PRINTBENCH_P2S_HOST=.*/PRINTBENCH_P2S_HOST=${HOST}/" /etc/printbench/collector.env
 systemctl restart printbench-collector.path
 systemctl restart printbench-collector.service || true
+systemctl restart printbench-camera.service || true
+systemctl restart printbench-ui.service || true
 sleep 2
 systemctl --no-pager --full status printbench-collector.service || true
 EOF
@@ -188,6 +194,9 @@ printf 'SSH: '; systemctl is-active ssh 2>/dev/null || true
 printf 'mDNS: '; systemctl is-active avahi-daemon 2>/dev/null || true
 printf 'Firewall: '; systemctl is-active nftables 2>/dev/null || true
 printf 'Collector: '; systemctl is-active printbench-collector.service 2>/dev/null || true
+printf 'UI: '; systemctl is-active printbench-ui.service 2>/dev/null || true
+printf 'Camera: '; systemctl is-active printbench-camera.service 2>/dev/null || true
+printf 'Reader: '; systemctl is-active printbench-reader.service 2>/dev/null || true
 printf 'P2S host: '; sed -n 's/^PRINTBENCH_P2S_HOST=//p' /etc/printbench/collector.env 2>/dev/null
 EOF
 chmod 0755 /usr/local/bin/printbench-status
@@ -196,8 +205,9 @@ chmod 0755 /usr/local/bin/printbench-status
 sed -i 's/^#dtparam=i2c_arm=on/dtparam=i2c_arm=on/; s/^#dtparam=spi=on/dtparam=spi=on/' /boot/firmware/config.txt
 
 systemctl daemon-reload
-systemctl enable ssh avahi-daemon nftables printbench-collector.path
+systemctl enable ssh avahi-daemon nftables printbench-collector.path printbench-ui.service printbench-camera.service
 systemctl restart ssh avahi-daemon nftables
 systemctl start printbench-collector.path
+systemctl start printbench-ui.service
 systemctl restart systemd-journald
 printf '%s\n' "PRINTBENCH Pi Bridge provisioned $(date -Is)" > /var/lib/printbench/image-ready

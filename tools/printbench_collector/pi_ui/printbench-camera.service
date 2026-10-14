@@ -1,0 +1,31 @@
+[Unit]
+Description=PRINTBENCH Local P2S Camera Bridge
+After=network-online.target printbench-collector.service
+Wants=network-online.target
+ConditionPathExists=/etc/printbench/bambu.json
+
+[Service]
+Type=simple
+User=printbench
+Group=printbench
+WorkingDirectory=/opt/printbench/repo/tools/printbench_collector
+ExecStart=/usr/bin/python3 /opt/printbench/repo/tools/printbench_collector/camera_bridge.py
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=PRINTBENCH_CAMERA_RUNTIME=/run/printbench-camera
+Environment=PRINTBENCH_CAMERA_INTERVAL=1.0
+Environment=PRINTBENCH_CAMERA_IDLE_INTERVAL=60.0
+RuntimeDirectory=printbench-camera
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/printbench/repo/tools/printbench_collector /etc/printbench/bambu.json
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
