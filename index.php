@@ -73,5 +73,5 @@
 <div id="subview" class="view"></div>
 </main>
 </div>
-<script>window.LIVE_ENDPOINT='live-data.php';</script><script src="assets/qrcode.min.js"></script><script src="spool-manager.js"></script><script src="final-master.js"></script>
+<script>window.LIVE_ENDPOINT='live-data.php';</script><script src="spool-manager.js"></script><script src="final-master.js"></script>
 </body></html>
