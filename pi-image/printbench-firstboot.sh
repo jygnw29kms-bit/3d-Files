@@ -8,6 +8,8 @@ COLLECTOR_SHA="0A05C2A8448B3C3EB6DB90A26EC0C0793CA09D3BC4B35BC0537D08A568EF9EF8"
 BOOT_ARCHIVE="/boot/firmware/printbench-collector.tar.gz"
 
 mkdir -p /opt/printbench /etc/printbench /var/lib/printbench /var/log/journal /etc/ssh/sshd_config.d /etc/systemd/journald.conf.d
+chown root:printbench /opt/printbench
+chmod 0750 /opt/printbench
 for g in gpio i2c spi; do getent group "$g" >/dev/null || groupadd --system "$g"; done
 usermod -aG gpio,i2c,spi,dialout printbench
 chown root:printbench /etc/printbench
@@ -138,6 +140,8 @@ rm -rf /opt/printbench/repo
 mkdir -p /opt/printbench/repo
 tar -xzf "$BOOT_ARCHIVE" -C /opt/printbench/repo
 python3 -m venv --system-site-packages /opt/printbench/venv
+chown -R root:printbench /opt/printbench/venv
+chmod -R g+rX,o-rwx /opt/printbench/venv
 /opt/printbench/venv/bin/python -m pip install --upgrade pip
 if ! /opt/printbench/venv/bin/python -c "import paho.mqtt.client, requests, watchdog"; then
   /opt/printbench/venv/bin/pip install -r /opt/printbench/repo/tools/printbench_collector/requirements.txt
