@@ -112,10 +112,40 @@ def main():
     else:
         print('[PRINTBENCH] Media worker disabled', flush=True)
 
+    def web_push_loop():
+        while not STOP.is_set():
+            try:
+                result = push_live.push_once()
+                print('[PRINTBENCH] WEB PUSH OK ' + json.dumps(result, ensure_ascii=False), flush=True)
+            except Exception as e:
+                print('[PRINTBENCH] web push warning:', str(e), flush=True)
+            STOP.wait(5)
+
+    if _env_enabled('PRINTBENCH_WEB_PUSH', True):
+        threading.Thread(target=web_push_loop, daemon=True, name='printbench-web-push').start()
+        print('[PRINTBENCH] Web push worker started', flush=True)
+
     last_slice = 0.0
     last_push = 0.0
-    last_web_push = 0.0
     last_spool_sync = 0.0
+    spool_sync_state = {'running': False}
+
+    def run_spool_sync():
+        spool_sync_state['running'] = True
+        sync_db = None
+        try:
+            sync_db = collector.db_open()
+            spool_sync.ensure_schema(sync_db)
+            info = spool_sync.sync(sync_db)
+            print('[PRINTBENCH] SPOOL SYNC ' + json.dumps(info, ensure_ascii=False), flush=True)
+        except Exception as e:
+            print('[PRINTBENCH] spool sync warning:', str(e), flush=True)
+        finally:
+            if sync_db is not None:
+                try: sync_db.close()
+                except Exception: pass
+            spool_sync_state['running'] = False
+
     while not STOP.wait(1):
         now = time.time()
         if _env_enabled('PRINTBENCH_SLICER_SCAN', True) and now - last_slice >= 15:
@@ -127,22 +157,9 @@ def main():
         if state['connected'] and now - last_push >= 60:
             client.publish(topic_req, json.dumps({'pushing': {'sequence_id': str(int(now)), 'command': 'pushall'}}))
             last_push = now
-        if _env_enabled('PRINTBENCH_SPOOL_SYNC', True) and now - last_spool_sync >= 300:
-            try:
-                info=spool_sync.sync(db)
-                if int(now) % 900 < 305: print('[PRINTBENCH] SPOOL SYNC '+json.dumps(info,ensure_ascii=False),flush=True)
-            except Exception as e:
-                if int(now)%60<2: print('[PRINTBENCH] spool sync warning:',str(e),flush=True)
+        if _env_enabled('PRINTBENCH_SPOOL_SYNC', True) and now - last_spool_sync >= 300 and not spool_sync_state['running']:
+            threading.Thread(target=run_spool_sync, daemon=True, name='printbench-spool-sync').start()
             last_spool_sync=now
-        if _env_enabled('PRINTBENCH_WEB_PUSH', True) and now - last_web_push >= 5:
-            try:
-                result = push_live.push_once()
-                if int(now) % 30 < 5:
-                    print('[PRINTBENCH] WEB PUSH OK ' + json.dumps(result, ensure_ascii=False), flush=True)
-            except Exception as e:
-                print('[PRINTBENCH] web push warning:', str(e), flush=True)
-            last_web_push = now
-
     client.loop_stop()
     try: client.disconnect()
     except Exception: pass

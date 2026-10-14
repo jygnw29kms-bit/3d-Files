@@ -29,11 +29,15 @@ def downsample(rows,max_points=240):
     idx=sorted(set(round(i*step) for i in range(max_points)))
     return [rows[i] for i in idx]
 
-def range_data(db,hours):
+def range_data(db,hours,max_points=240):
     cutoff=(datetime.now(timezone.utc)-timedelta(hours=hours)).isoformat()
-    rows=db.execute('''SELECT ts,progress,remaining_min,layer_current,layer_total,nozzle_c,nozzle_target_c,bed_c,bed_target_c,chamber_c,wifi_rssi,speed_level FROM telemetry WHERE ts>=? ORDER BY id''',(cutoff,)).fetchall()
     stats=db.execute('''SELECT COUNT(*) samples,MIN(nozzle_c) nozzle_min,MAX(nozzle_c) nozzle_max,AVG(nozzle_c) nozzle_avg,MIN(bed_c) bed_min,MAX(bed_c) bed_max,AVG(bed_c) bed_avg,MIN(progress) progress_min,MAX(progress) progress_max,MIN(ts) first_ts,MAX(ts) last_ts FROM telemetry WHERE ts>=?''',(cutoff,)).fetchone()
-    return {'hours':hours,'history':downsample(rows),'stats':dict(stats)}
+    samples=int(stats['samples'] or 0)
+    step=max(1,(samples+max_points-1)//max_points)
+    rows=db.execute('''SELECT ts,progress,remaining_min,layer_current,layer_total,nozzle_c,nozzle_target_c,bed_c,bed_target_c,chamber_c,wifi_rssi,speed_level FROM telemetry WHERE ts>=? AND (id % ?)=0 ORDER BY id''',(cutoff,step)).fetchall()
+    latest=db.execute('''SELECT ts,progress,remaining_min,layer_current,layer_total,nozzle_c,nozzle_target_c,bed_c,bed_target_c,chamber_c,wifi_rssi,speed_level FROM telemetry WHERE ts>=? ORDER BY id DESC LIMIT 1''',(cutoff,)).fetchone()
+    if latest and (not rows or rows[-1]['ts'] != latest['ts']): rows.append(latest)
+    return {'hours':hours,'history':downsample(rows,max_points),'stats':dict(stats)}
 
 def safe_num(v):
     try:return float(v)

@@ -158,7 +158,7 @@ def normalize_report(msg):
       'layer_current': pick(p,'layer_num'), 'layer_total': pick(p,'total_layer_num'),
       'nozzle_c': pick(p,'nozzle_temper'), 'nozzle_target_c': pick(p,'nozzle_target_temper'),
       'bed_c': pick(p,'bed_temper'), 'bed_target_c': pick(p,'bed_target_temper'),
-      'chamber_c': pick(p,'chamber_temper'), 'wifi_rssi': pick(p,'wifi_signal'),
+      'chamber_c': pick(p,'chamber_temper','device.ctc.info.temp','info.temp'), 'wifi_rssi': pick(p,'wifi_signal'),
       'speed_level': pick(p,'spd_lvl'), 'speed_mag': pick(p,'spd_mag'),
       'fan_part': pick(p,'cooling_fan_speed'), 'fan_aux': pick(p,'big_fan1_speed'),
       'fan_chamber': pick(p,'big_fan2_speed'), 'fan_heatbreak': pick(p,'heatbreak_fan_speed'),
