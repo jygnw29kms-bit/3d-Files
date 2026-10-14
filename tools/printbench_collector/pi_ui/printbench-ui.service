@@ -12,12 +12,14 @@ ExecStart=/usr/bin/python3 /opt/printbench/repo/tools/printbench_collector/pi_ui
 Restart=on-failure
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/printbench/collector.env
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadOnlyPaths=/opt/printbench/repo/tools/printbench_collector
 ReadWritePaths=-/run/printbench-camera
+ReadWritePaths=/var/lib/printbench
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 LockPersonality=true
 RestrictSUIDSGID=true

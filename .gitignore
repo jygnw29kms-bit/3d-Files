@@ -17,6 +17,7 @@ public-live-media.png
 /tools/printbench_collector/__pycache__/
 /tools/printbench_collector/*.pyc
 /tools/printbench_collector/.push-token
+/tools/printbench_collector/.control-token
 
 # Local helper / diagnostics
 /tools/make_printbench_key.cmd

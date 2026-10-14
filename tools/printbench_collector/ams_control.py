@@ -1,9 +1,10 @@
 from __future__ import annotations
-import json, ssl, threading, time
+import json,  threading, time
 from pathlib import Path
 from typing import Any
 import paho.mqtt.client as mqtt
 import collector
+import bambu_tls
 
 ROOT=Path(__file__).resolve().parent
 CONFIG=ROOT/'ams_control.json'
@@ -66,7 +67,7 @@ def send(command:dict,apply=False,timeout=None):
     serial,code=collector.load_local_bambu_identity(); req=f'device/{serial}/request'; report=f'device/{serial}/report'
     wanted=str(payload.get('print',{}).get('sequence_id','')); event=threading.Event(); answer={}
     client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,protocol=mqtt.MQTTv311)
-    client.username_pw_set('bblp',code); client.tls_set(cert_reqs=ssl.CERT_NONE); client.tls_insecure_set(True)
+    client.username_pw_set('bblp',code); client.tls_set_context(bambu_tls.mqtt_context())
     def on_connect(c,u,flags,reason,props):
         if getattr(reason,'is_failure',False):return
         c.subscribe(report); c.publish(req,json.dumps(payload,separators=(',',':')))

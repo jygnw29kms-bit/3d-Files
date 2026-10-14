@@ -1,7 +1,8 @@
 from __future__ import annotations
-import json, os, signal, socket, ssl, threading, time
+import json, os, signal, socket,  threading, time
 import paho.mqtt.client as mqtt
 import collector
+import bambu_tls
 import push_live
 import media_worker
 import session_tracker
@@ -48,8 +49,7 @@ def main():
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv311)
     client.username_pw_set('bblp', code)
-    client.tls_set(cert_reqs=ssl.CERT_NONE)
-    client.tls_insecure_set(True)
+    client.tls_set_context(bambu_tls.mqtt_context())
 
     def on_connect(c, u, flags, reason, props):
         ok = not getattr(reason, 'is_failure', False)

@@ -1,9 +1,11 @@
 from __future__ import annotations
-import json, os, sqlite3, socket, subprocess, threading, time
+import json, os, secrets, sqlite3, socket, subprocess, sys, threading, time
 from datetime import datetime, timezone, timedelta
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+import command_engine
 
 ROOT=Path(__file__).resolve().parent
 COLLECTOR=ROOT.parent
@@ -13,6 +15,8 @@ CAMERA_SNAPSHOT=Path(os.environ.get('PRINTBENCH_CAMERA_SNAPSHOT','/run/printbenc
 CAMERA_VIEWER=CAMERA_SNAPSHOT.parent/'viewer.active'
 API_PREFIX='/api/v1'
 CAMERA_STREAMS=threading.BoundedSemaphore(2)
+CONTROL_TOKEN_FILE=Path(os.environ.get('PRINTBENCH_CONTROL_TOKEN_FILE','/etc/printbench/control.token'))
+MAX_CONTROL_BODY=4096
 
 
 def dbconn():
@@ -128,10 +132,30 @@ def system_info():
       'uptime_sec':uptime,'disk':disk,'time':datetime.now(timezone.utc).isoformat()}
 
 
+def _control_token():
+    try:
+        token=CONTROL_TOKEN_FILE.read_text(encoding='utf-8').strip()
+        if len(token) != 64 or any(ch not in '0123456789abcdefABCDEF' for ch in token):
+            return ''
+        return token
+    except Exception:return ''
+
+
+def control_catalog(authorized=False):
+    items={}
+    for name,value in command_engine.capabilities().items():
+        item=dict(value)
+        if not authorized and item.get('enabled'):
+            item['enabled']=False;item['status']='authorization_required'
+        items[name]=item
+    return {'available':bool(_control_token()),'browser_write_endpoint':bool(authorized),'items':items}
+
+
 def capabilities():
     return {'api':'v1','read_only':True,'printer':'P2S','material_system':'AMS 2 Pro','features':{'telemetry':True,'history':True,
       'sessions':True,'ams_status':True,'rfid_diagnostics':True,'external_tag_observations':True,'spool_inventory':True,
-      'camera_browser_bridge':camera_fresh(),'camera_mjpeg':camera_fresh(),'reader_serial_bridge':True,'device_firmware':True,'ams_writes':False,'raw_uid_browser':False}}
+      'camera_browser_bridge':camera_fresh(),'camera_mjpeg':camera_fresh(),'reader_serial_bridge':True,'device_firmware':True,
+      'control_catalog':True,'native_control_api':bool(_control_token()),'raw_mqtt_control':False,'raw_uid_browser':False}}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -170,6 +194,34 @@ class Handler(SimpleHTTPRequestHandler):
             pass
         finally:
             CAMERA_STREAMS.release()
+    def _control_authorized(self):
+        expected=_control_token();provided=self.headers.get('X-API-Key','')
+        return bool(expected and provided and secrets.compare_digest(expected,provided))
+    def _read_json_body(self):
+        if (self.headers.get('Content-Type') or '').split(';',1)[0].strip().lower()!='application/json':
+            raise ValueError('application/json required')
+        try:length=int(self.headers.get('Content-Length','0'))
+        except Exception:raise ValueError('invalid content length')
+        if length<0 or length>MAX_CONTROL_BODY:raise ValueError('request body too large')
+        raw=self.rfile.read(length) if length else b'{}'
+        data=json.loads(raw.decode('utf-8'))
+        if not isinstance(data,dict):raise ValueError('JSON object required')
+        return data
+    def do_POST(self):
+        u=urlparse(self.path);path=u.path
+        if path.startswith('/api/') and not path.startswith(API_PREFIX+'/'):path=API_PREFIX+path[4:]
+        if not path.startswith(API_PREFIX+'/control/'):
+            return self._json({'error':'not_found'},404)
+        if not self._control_authorized():
+            return self._json({'error':'control_authorization_required'},403)
+        try:
+            body=self._read_json_body();name=path[len(API_PREFIX+'/control/'):].replace('/','.')
+            result=command_engine.execute(name,body.get('args') or {},bool(body.get('confirm',False)))
+            return self._json(result,200 if result.get('ok') else 409)
+        except PermissionError as e:return self._json({'error':'policy','detail':str(e)},403)
+        except ValueError as e:return self._json({'error':'invalid','detail':str(e)},400)
+        except RuntimeError as e:return self._json({'error':'unavailable','detail':str(e)},409)
+        except Exception:return self._json({'error':'internal'},500)
     def do_GET(self):
         u=urlparse(self.path)
         if u.path=='/camera/latest.jpg':return self._jpeg()
@@ -187,6 +239,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if path==API_PREFIX+'/system':return self._json(system_info())
                 if path==API_PREFIX+'/firmware':return self._json(firmware())
                 if path==API_PREFIX+'/capabilities':return self._json(capabilities())
+                if path==API_PREFIX+'/control-capabilities':return self._json(control_catalog(self._control_authorized()))
                 return self._json({'error':'not_found'},404)
             except Exception:return self._json({'error':'internal'},500)
         return super().do_GET()

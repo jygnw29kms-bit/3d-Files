@@ -35,13 +35,25 @@ EOF
 cat >/etc/printbench/collector.env <<'EOF'
 PRINTBENCH_P2S_HOST=192.168.178.110
 PRINTBENCH_BAMBU_CONFIG=/etc/printbench/bambu.json
+PRINTBENCH_P2S_CERT=/etc/printbench/p2s-cert.pem
 PRINTBENCH_MEDIA_WORKER=0
 PRINTBENCH_SLICER_SCAN=0
 PRINTBENCH_WEB_PUSH=1
 PRINTBENCH_SPOOL_SYNC=0
+PRINTBENCH_CONTROL_WRITES=0
+PRINTBENCH_CONTROL_DESTRUCTIVE=0
+PRINTBENCH_CONTROL_THERMAL=0
+PRINTBENCH_CONTROL_AMS=0
+PRINTBENCH_CONTROL_TOKEN_FILE=/etc/printbench/control.token
 EOF
 chown root:printbench /etc/printbench/collector.env
 chmod 0640 /etc/printbench/collector.env
+if [ ! -s /etc/printbench/control.token ]; then
+  umask 027
+  python3 -c "import secrets; print(secrets.token_hex(32))" >/etc/printbench/control.token
+fi
+chown root:printbench /etc/printbench/control.token
+chmod 0640 /etc/printbench/control.token
 
 cat >/etc/printbench/bambu.json.example <<'EOF'
 {"serial":"YOUR_P2S_SERIAL","access_code":"YOUR_LAN_ACCESS_CODE"}
@@ -171,6 +183,9 @@ Path('/etc/printbench/bambu.json').write_text(json.dumps({'serial':sys.argv[1],'
 PY
 chown root:printbench /etc/printbench/bambu.json
 chmod 0640 /etc/printbench/bambu.json
+/opt/printbench/venv/bin/python /opt/printbench/repo/tools/printbench_collector/pin_printer_certificate.py --host "$HOST" --out /etc/printbench/p2s-cert.pem
+chown root:printbench /etc/printbench/p2s-cert.pem
+chmod 0640 /etc/printbench/p2s-cert.pem
 sed -i "s/^PRINTBENCH_P2S_HOST=.*/PRINTBENCH_P2S_HOST=${HOST}/" /etc/printbench/collector.env
 systemctl restart printbench-collector.path
 systemctl restart printbench-collector.service || true

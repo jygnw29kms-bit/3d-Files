@@ -1,168 +1,132 @@
 # PRINTBENCH Bambu Integration Research
 
 Date: 2026-10-14
-Scope: private, local use by the owner only. Not intended for public redistribution.
+Status: verified engineering notes for PRINTBENCH Studio.
 
 ## Objective
 
-Integrate Bambu Lab P2S + AMS 2 Pro as a first-class device inside PRINTBENCH Studio / OrcaSlicer with live telemetry, camera, files, AMS state, drying state and controlled write actions.
+Integrate Bambu Lab P2S + AMS 2 Pro as a first-class device in PRINTBENCH Studio while keeping printer credentials and Bambu-specific transport details behind a local Device API / Pi bridge boundary.
 
-## Projects evaluated
+## Verified upstream references
 
-### 1. ClusterM/open-bamboo-networking
+### ClusterM/open-bamboo-networking
 
-Usefulness: VERY HIGH
+Repository: https://github.com/ClusterM/open-bamboo-networking
 
-- Clean-room drop-in replacement for the proprietary `bambu_networking` plugin.
-- Implements the same C ABI used by Bambu Studio / OrcaSlicer.
-- Explicit OrcaSlicer support and primarily P2S-tested.
-- Covers LAN MQTT, printing, file transfer, camera paths, device status and optional cloud paths.
-- Best reference for the Orca/Bambu networking boundary.
+- AGPL-3.0 open-source replacement for the proprietary `bambu_networking` plugin.
+- Bambu Studio and Orca Slicer consume the same documented C ABI.
+- Orca Slicer is supported from 2.3.2 with client-specific install conventions and known differences.
+- Its documentation explicitly calls out Orca-specific gaps such as the current-print thumbnail path.
+- The project author states that P2S is a primary real-world test target.
 
-Caution: cloud/non-Developer-Mode paths include credential/signing complexity. Do not make leaked or third-party signing material a mandatory dependency.
+Engineering use: ABI and networking-boundary reference. Do not copy opaque credentials or make cloud/signing paths a mandatory PRINTBENCH dependency.
 
-### 2. greghesp/ha-bambulab
+### Doridian/OpenBambuAPI
 
-Usefulness: VERY HIGH
+Repository: https://github.com/Doridian/OpenBambuAPI
 
-- Mature MQTT command catalogue and detailed telemetry/state handling.
-- Implements light, fan, speed, print control, AMS operations and filament settings.
-- Large issue history exposes firmware regressions quickly.
-- P2S/AMS 2 Pro reports prove that command publication and actual physical success can diverge.
+- Documents local MQTT request/report envelopes, `sequence_id` correlation and `info.get_version`.
+- `info.get_version` returns module entries containing `name`, `hw_ver`, `sw_ver` and serial fields.
 
-Use it as a reference for command payloads, capability detection, state verification and firmware compatibility.
+Engineering use: protocol-field reference. PRINTBENCH intentionally persists only module name, hardware version, software version and timestamp; serial fields are discarded.
 
-### 3. OpenBambuAPI
+### greghesp/ha-bambulab
 
-Usefulness: VERY HIGH
+Repository: https://github.com/greghesp/ha-bambulab
 
-- Detailed MQTT protocol reference.
-- Documents local TLS/8883, `bblp` authentication, request/report topics and `sequence_id` correlation.
-- Best protocol-level reference for request/response envelopes and field names.
+- Mature local MQTT implementation and useful compatibility history.
+- Issue/release history documents P2S firmware-specific transport regressions and command/state edge cases.
+- A reported P2S 01.02.00.00 case required TLS 1.2 because TLS 1.3 ClientHello did not complete.
 
-### 4. BambuTools/bambulabs_api
+Important local verification: the PRINTBENCH P2S also reports OTA `01.02.00.00`, but a direct probe on this exact unit negotiated TLS 1.3 with `TLS_AES_256_GCM_SHA384`. Therefore PRINTBENCH must not hard-code a TLS-1.2 cap solely from the firmware version. Capability/transport behavior must be measured per installation and treated as compatibility data.
 
-Usefulness: HIGH
+### VID-PRO/BambuTagger-AMS
 
-- Clean higher-level Python API around monitoring/control.
-- Useful design reference for reconnects, camera/file operations and a stable API above raw MQTT.
+Repository: https://github.com/VID-PRO/BambuTagger-AMS
 
-### 5. BambuTagger-AMS / OpenSpool-style projects
+- Demonstrates a practical four-slot external tag architecture using one ESP32 and four RC522 readers on shared SPI.
+- Supports NTAG-based formats in addition to Bambu-format tags and maps readers to AMS slots.
+- Confirms that external tag acquisition can be separated from printer-side AMS tray synchronization.
 
-Usefulness: HIGH for spool integration, LOW as slicer core
+Engineering use: hardware-topology reference. PRINTBENCH uses a stricter security boundary: reader observations travel over local USB CDC JSONL to the Pi, and a UID can identify a spool but can never authorize a printer write.
 
-- Confirms external RC522/NTAG readers mapped to AMS slots are practical.
-- Useful reader/slot-mapping ideas.
-- NFC UID must never authorize printer writes.
+### BambuTools/bambulabs_api
 
-### 6. mqtt-bambu and similar bridges
+Repository: https://github.com/BambuTools/bambulabs_api
 
-Usefulness: MEDIUM
+Engineering use: secondary Python API reference for reconnect, monitoring and higher-level abstraction patterns. It is not the authoritative PRINTBENCH protocol source.
 
-- Good normalization/reconnect/state-merge examples.
-- Reinforces our bridge/API architecture.
+## Measured local P2S compatibility
 
-### 7. beambam / signed-MQTT experiments
+The following facts were measured on the actual PRINTBENCH P2S through read-only local operations:
 
-Usefulness: RESEARCH ONLY
+- Printer model scope: P2S / Orca model `N7`.
+- MQTT over TCP 8883 is operational on the trusted LAN.
+- Read-only `info.get_version` succeeds.
+- OTA software version: `01.02.00.00`.
+- Sanitized module inventory contains seven module names with hardware/software versions.
+- Direct TLS negotiation on MQTT port 8883 succeeded with TLS 1.3 and cipher `TLS_AES_256_GCM_SHA384`.
+- RTSPS camera input is operational and is bridged locally to same-origin JPEG/MJPEG without exposing the credential-bearing URI.
+- Stock AMS report/MQTT behavior does not expose a useful non-zero UID for the tested generic NTAG216 tag.
 
-- Useful to track newer signed-MQTT restrictions.
-- Do not make leaked certificates, extracted signing keys or account-token recovery part of the default path.
-- Private use relaxes redistribution/licensing constraints, but not the security risk of importing opaque credentials or bypass mechanisms.
+These are installation measurements, not claims that every P2S or firmware build behaves identically.
 
 ## Resulting architecture
 
-Keep three boundaries:
+Maintain three explicit trust boundaries:
 
-1. Orca / PRINTBENCH UI
-2. PRINTBENCH Device API / Pi bridge
-3. Bambu LAN MQTT + RTSPS + file transport
+1. PRINTBENCH Studio / Orca user interface.
+2. PRINTBENCH Device API and Pi bridge.
+3. Bambu-specific LAN transports (MQTT, RTSPS and file transport where verified).
 
-The Orca UI must not know printer credentials, raw MQTT topics or camera credentials.
+The desktop/UI layer must not receive printer credentials, raw MQTT topics, raw RFID/NFC UIDs or credential-bearing camera URLs.
 
 ## Device API responsibilities
 
 - normalized live state
 - printer/AMS capability model
+- sanitized firmware/module inventory
 - command whitelist and validation
 - state preconditions
-- sequence-id generation and response correlation
+- request sequence IDs and response correlation
 - post-command state verification
-- rate limiting
+- bounded rate limiting
 - audit/event logging
-- firmware/model compatibility matrix
+- firmware/model compatibility observations
 
-## Capability model
+Capability state should distinguish at least `supported_verified`, `supported_unverified`, `unsupported`, `blocked_by_firmware` and `disabled_by_policy`.
 
-Each capability is one of:
-- supported_verified
-- supported_unverified
-- unsupported
-- blocked_by_firmware
-- disabled_by_policy
+## Write safety model
 
-Initial write groups:
-- print.pause / resume / stop
-- printer.light / speed_mode / fan / temperature
-- print.skip_object
-- ams.load_unload / filament_setting / drying
+All state-changing commands remain disabled unless explicitly enabled locally. There is no generic raw-MQTT browser endpoint.
 
-Read capabilities remain independent from writes.
+Before a future command is sent, PRINTBENCH must validate fresh telemetry, exact P2S product scope, command whitelist, numeric bounds, AMS/slot IDs where relevant, machine-state preconditions and the absence of a conflicting command transaction.
 
-## Command safety model
+A transport publish or positive response is not sufficient proof of physical success. Where a state transition can be observed, command completion must require a correlated response and/or agreeing post-state within a bounded timeout.
 
-All writes remain disabled unless explicitly enabled locally.
+## External tag path
 
-Before sending validate printer freshness, exact P2S model, firmware/capability state, fixed command whitelist, bounded numeric values, AMS/slot IDs, machine-state preconditions and absence of a conflicting in-flight command.
+Open spool tags are intentionally independent from stock AMS RFID:
 
-During sending use a unique sequence ID, bounded timeout and no arbitrary raw-MQTT UI endpoint.
+`NTAG -> RC522 -> ESP32 -> USB CDC JSONL -> reader_serial.py -> validation -> local spool match -> proposal`
 
-After sending, success requires a matching positive response plus agreeing post-state, or independently verified post-state. Publish success alone is never enough. This specifically addresses observed P2S/AMS cases where MQTT accepts a command but the physical action does not happen.
+The reader service remains disabled until physical hardware is connected and its USB identity has been measured. A stable udev rule must be generated from the actual board VID/PID/serial rather than guessed.
 
-## Security decisions
+## Orca integration decision
 
-- LAN-first; no internet exposure of the P2S.
-- Credentials remain local on Pi/desktop.
-- UI receives only sanitized Device API data.
-- Raw MQTT and complete NFC/RFID identifiers stay private diagnostics.
-- Separate read/write code paths.
-- No generic `send_raw_mqtt` endpoint.
-- No cloud credentials in logs.
-- No mandatory leaked signing material.
-- Camera credentials stay inside the bridge process.
-- Thermal/destructive commands use stricter ranges/state validation than light/pause operations.
+OrcaSlicer 2.4.2 is the current pinned engine. PRINTBENCH keeps the C++ patch surface small: product branding, P2S-only selection and removal of irrelevant generic-printer UI. Device integration remains outside the Orca core wherever possible.
 
-## Private-use note
+Orca's newer Python plugin system is documented for nightlies/releases newer than 2.4.2. PRINTBENCH 2.4.2 therefore must not depend on that API, but future migration should move suitable integration into explicit plugin capabilities once the project upgrades beyond the pinned baseline.
 
-This installation is intended only for the owner's private use and is not distributed. That makes local GPL/AGPL evaluation and modification significantly simpler. Still keep upstream attribution and source provenance so future maintenance remains auditable.
+## Implementation order
 
-## Recommended implementation order
-
-1. Finish normalized Device API and capability endpoint.
-2. Add command transaction engine with dry-run default.
-3. Implement low-risk controls first: light, pause, resume, speed mode.
-4. Add stop with explicit desktop confirmation.
-5. Add AMS load/unload and filament settings with post-state validation.
-6. Add AMS drying only after verifying the exact installed P2S firmware command flow.
-7. Integrate camera and file browser into the Orca Device panel.
-8. Patch Orca-specific gaps such as current-print thumbnail/state routing.
-9. Add compatibility tests using sanitized MQTT fixtures and an emulator/mock broker.
+1. Keep normalized read-only Device API and firmware/capability reporting fully verified.
+2. Add a fail-closed command transaction engine with dry-run default and no raw-MQTT passthrough.
+3. Add low-risk command definitions only after payloads and post-state are verified against the installed P2S firmware.
+4. Add destructive/thermal/AMS writes only with stricter validation and explicit local enablement.
+5. Integrate Device API status into PRINTBENCH Studio while keeping credentials in the bridge.
+6. Add sanitized MQTT fixtures/mock tests before expanding write support.
 
 ## Decision
 
-PRINTBENCH should not become a thin copy of Bambu Studio. The strongest design is an Orca-based slicer with its own local, testable and fail-closed Bambu Device API. `open-bamboo-networking` is the best ABI reference; `ha-bambulab` and `OpenBambuAPI` are the best command/protocol references; our Pi bridge remains the security and compatibility boundary.
-
-## TLS hardening target
-
-Current collector code still uses permissive local TLS for MQTT. That is acceptable only as a temporary compatibility mode.
-
-Target state for P2S LAN transports:
-- trust the Bambu printer CA/leaf where available;
-- bind the certificate identity to the expected printer serial (`CN=<serial>`);
-- because the printer is reached by IP and may not present an IP SAN, use explicit SNI/serial validation or a pinned device leaf;
-- support TOFU/pinned leaf only as a controlled local bootstrap mechanism;
-- store the pinned certificate locally and never in browser responses;
-- expose a diagnostic mismatch error instead of silently falling back to insecure TLS;
-- keep an explicit emergency/debug `skip_verify` switch, default off once pinning is provisioned.
-
-This follows the stronger approach documented by OpenBambuAPI/open-bamboo-networking and avoids leaving `CERT_NONE` as the permanent security model.
+PRINTBENCH Studio should not be a cosmetic Bambu Studio clone. Orca remains the slicing engine; PRINTBENCH owns a local, testable, fail-closed Device API. Bambu-specific protocol knowledge is isolated behind that boundary, while open spool identification remains an independent acquisition path.

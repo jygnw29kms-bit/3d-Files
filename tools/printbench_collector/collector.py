@@ -1,8 +1,9 @@
 from __future__ import annotations
-import json, os, re, sqlite3, ssl, time
+import json, os, re, sqlite3,  time
 from datetime import datetime, timezone
 from pathlib import Path
 import paho.mqtt.client as mqtt
+import bambu_tls
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'printbench.db'
@@ -195,7 +196,7 @@ def run_mqtt(db, seconds=20):
     state={'connected':False,'messages':0,'last':None}
     client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv311)
     client.username_pw_set('bblp', code)
-    client.tls_set(cert_reqs=ssl.CERT_NONE); client.tls_insecure_set(True)
+    client.tls_set_context(bambu_tls.mqtt_context())
     def on_connect(c,u,flags,reason,props):
         if not getattr(reason, 'is_failure', False):
             state['connected']=True; c.subscribe(topic_report)
