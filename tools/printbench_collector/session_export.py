@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-import session_tracker
+import session_tracker, costing
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'printbench.db'
@@ -21,7 +21,10 @@ def snapshot(limit=100):
           SELECT id,started_at,ended_at,state,outcome,start_progress,end_progress,max_progress,
                  start_layer,end_layer,max_layer,origin_path,filament_type,filament_vendor,
                  filament_profile,planned_filament_g,planned_filament_m,planned_time_sec,
-                 actual_time_sec,final_print_state,fail_reason,media_key,final_image
+                 actual_time_sec,final_print_state,fail_reason,media_key,final_image,
+                 cost_basis,material_price_eur_per_kg,electricity_price_eur_per_kwh,machine_rate_eur_per_hour,
+                 margin_pct,estimated_energy_kwh,material_cost_eur,electricity_cost_eur,machine_cost_eur,
+                 self_cost_eur,margin_eur,sale_price_eur,energy_is_estimated
           FROM print_sessions ORDER BY id DESC LIMIT ?
         ''', (int(limit),)).fetchall()
         sessions = []
@@ -42,6 +45,9 @@ def snapshot(limit=100):
                  SUM(COALESCE(planned_filament_m,0)) filament_m,
                  SUM(COALESCE(actual_time_sec,0)) actual_time_sec,
                  SUM(COALESCE(planned_time_sec,0)) planned_time_sec,
+                 SUM(COALESCE(estimated_energy_kwh,0)) estimated_energy_kwh,
+                 SUM(COALESCE(self_cost_eur,0)) self_cost_eur,
+                 SUM(COALESCE(sale_price_eur,0)) sale_price_eur,
                  MIN(started_at) first_print,
                  MAX(COALESCE(ended_at,started_at)) last_print
           FROM print_sessions
@@ -53,6 +59,6 @@ def snapshot(limit=100):
         success = int(summary.get('success') or 0)
         summary['finished'] = finished
         summary['success_rate'] = round(success / finished * 100, 1) if finished else None
-        return {'print_sessions': sessions, 'print_summary': summary}
+        return {'print_sessions': sessions, 'print_summary': summary, 'cost_config': costing.public_config()}
     finally:
         db.close()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import costing
 from datetime import datetime, timedelta, timezone
 
 
@@ -50,14 +51,34 @@ def ensure_schema(db):
       media_key TEXT,
       slicer_json TEXT,
       final_image TEXT,
+      cost_basis TEXT,
+      material_price_eur_per_kg REAL,
+      electricity_price_eur_per_kwh REAL,
+      machine_rate_eur_per_hour REAL,
+      margin_pct REAL,
+      estimated_energy_kwh REAL,
+      material_cost_eur REAL,
+      electricity_cost_eur REAL,
+      machine_cost_eur REAL,
+      self_cost_eur REAL,
+      margin_eur REAL,
+      sale_price_eur REAL,
+      energy_is_estimated INTEGER,
       FOREIGN KEY(slicer_job_id) REFERENCES slicer_jobs(id)
     );
     CREATE INDEX IF NOT EXISTS idx_print_sessions_started ON print_sessions(started_at);
     CREATE INDEX IF NOT EXISTS idx_print_sessions_state ON print_sessions(state);
     ''')
     cols={r[1] for r in db.execute('PRAGMA table_info(print_sessions)').fetchall()}
-    if 'final_image' not in cols:
-        db.execute('ALTER TABLE print_sessions ADD COLUMN final_image TEXT')
+    migrations={
+      'final_image':'TEXT','cost_basis':'TEXT','material_price_eur_per_kg':'REAL',
+      'electricity_price_eur_per_kwh':'REAL','machine_rate_eur_per_hour':'REAL','margin_pct':'REAL',
+      'estimated_energy_kwh':'REAL','material_cost_eur':'REAL','electricity_cost_eur':'REAL',
+      'machine_cost_eur':'REAL','self_cost_eur':'REAL','margin_eur':'REAL','sale_price_eur':'REAL',
+      'energy_is_estimated':'INTEGER'
+    }
+    for name,typ in migrations.items():
+        if name not in cols: db.execute(f'ALTER TABLE print_sessions ADD COLUMN {name} {typ}')
     db.commit()
 
 
@@ -129,12 +150,21 @@ def _finish(db, session, report, outcome):
     actual = max(0, int((ended - started).total_seconds())) if started and ended else None
     state = _state(report.get('print_state'))
     fail_reason = report.get('fail_reason') or report.get('print_error')
+    planned_row=db.execute('SELECT planned_filament_g FROM print_sessions WHERE id=?',(session['id'],)).fetchone()
+    costs=costing.calculate(planned_row[0] if planned_row else 0, actual)
     db.execute('''
       UPDATE print_sessions SET ended_at=?,state='finished',outcome=?,end_progress=?,
         max_progress=MAX(COALESCE(max_progress,0),COALESCE(?,0)),end_layer=?,
         max_layer=MAX(COALESCE(max_layer,0),COALESCE(?,0)),actual_time_sec=?,
-        final_print_state=?,fail_reason=? WHERE id=?
-    ''', (ts, outcome, progress, progress, layer, layer, actual, state, fail_reason, session['id']))
+        final_print_state=?,fail_reason=?,cost_basis=?,material_price_eur_per_kg=?,
+        electricity_price_eur_per_kwh=?,machine_rate_eur_per_hour=?,margin_pct=?,
+        estimated_energy_kwh=?,material_cost_eur=?,electricity_cost_eur=?,machine_cost_eur=?,
+        self_cost_eur=?,margin_eur=?,sale_price_eur=?,energy_is_estimated=? WHERE id=?
+    ''', (ts, outcome, progress, progress, layer, layer, actual, state, fail_reason,
+          costs['cost_basis'],costs['material_price_eur_per_kg'],costs['electricity_price_eur_per_kwh'],
+          costs['machine_rate_eur_per_hour'],costs['margin_pct'],costs['estimated_energy_kwh'],
+          costs['material_cost_eur'],costs['electricity_cost_eur'],costs['machine_cost_eur'],
+          costs['self_cost_eur'],costs['margin_eur'],costs['sale_price_eur'],costs['energy_is_estimated'],session['id']))
     db.execute('INSERT INTO events(ts,kind,payload) VALUES(?,?,?)', (
       ts, 'print_session_finished', json.dumps({'id': session['id'], 'outcome': outcome, 'state': state}, ensure_ascii=False)
     ))
