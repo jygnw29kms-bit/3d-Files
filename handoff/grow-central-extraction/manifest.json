@@ -1,0 +1,116 @@
+{
+  "source_repository": "jygnw29kms-bit/135er-Grow-Central",
+  "source_commit": "b793ec426e378bd728ec2de8c43b2305fe34c68e",
+  "files": [
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_bottom.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_bottom.stl",
+      "sha256": "e6b27cc5a3ad34ee3728cd641e76588a3dae045fdb652260ca5741aaafdc4361",
+      "bytes": 1009871
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_case.scad",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_case.scad",
+      "sha256": "f407aea6f45aa0b38594a92c93a974c3f7b7635dd83fb4c2a8de5bad09165901",
+      "bytes": 7234
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_lid.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_lid.stl",
+      "sha256": "ee05ca291e9d6dcc2fca6fd588173a7562d99946525c3907fc21e29523cedfe3",
+      "bytes": 1179023
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_lid_gpio.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_lid_gpio.stl",
+      "sha256": "f417f3c5e092bb52d8522de27a558a6b73baf73a83abff8bc9d4221fc04f9b59",
+      "bytes": 1356926
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_lid_service.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_lid_service.stl",
+      "sha256": "e8c68e0d8e99df6352f5581e21ea2209b940925fe53ba32ab89d28b82fa71c1b",
+      "bytes": 1425089
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_printplate.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_printplate.stl",
+      "sha256": "9b6295c4e65e01c0141919bc677311e00182d0fc29bae973cee10364a88aed36",
+      "bytes": 2193817
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_printplate_gpio.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_printplate_gpio.stl",
+      "sha256": "daa8a8462eaef75f3190408126977a801a7fcdb394c0442671a74b0650e41b1b",
+      "bytes": 2371356
+    },
+    {
+      "source": "website/downloads/3d/135er_Grow_Central_RPi4_printplate_service.stl",
+      "target": "Hardware/Grow-Central-RPi4/135er_Grow_Central_RPi4_printplate_service.stl",
+      "sha256": "60ed4f859f64e1f52aed66487bb1debc83974b40a47ce02101b43c26ac5ebc3c",
+      "bytes": 2439041
+    },
+    {
+      "source": "website/downloads/3d/profiles/135er_RPi4_Case_P2S_ASA_process.json",
+      "target": "Hardware/Grow-Central-RPi4/profiles/135er_RPi4_Case_P2S_ASA_process.json",
+      "sha256": "83f638b58c98f0e8123b0d526a731bb25382c4ce38c5b7b35c8b665faafaabcc",
+      "bytes": 771
+    },
+    {
+      "source": "website/downloads/3d/profiles/135er_RPi4_Case_P2S_PETG_process.json",
+      "target": "Hardware/Grow-Central-RPi4/profiles/135er_RPi4_Case_P2S_PETG_process.json",
+      "sha256": "feb5e6607318a3991a90e828c6e242805cbe00c8143ec825f1216d4a33871776",
+      "bytes": 773
+    },
+    {
+      "source": "website/assets/hardware/rpi4-case-closed.png",
+      "target": "Hardware/Grow-Central-RPi4/previews/rpi4-case-closed.png",
+      "sha256": "b09c0a5d02d72160507272a8456d16401cd598355346b05867a476668b9e7fe6",
+      "bytes": 36709
+    },
+    {
+      "source": "website/assets/hardware/rpi4-case-gpio.png",
+      "target": "Hardware/Grow-Central-RPi4/previews/rpi4-case-gpio.png",
+      "sha256": "f48aa51053ae5ece2b9b05cb8d8f18ead1a8084624925e456f71c99d251874ab",
+      "bytes": 39108
+    },
+    {
+      "source": "website/assets/hardware/rpi4-case-service.png",
+      "target": "Hardware/Grow-Central-RPi4/previews/rpi4-case-service.png",
+      "sha256": "44e195eb56c137ab563ac58d1c73047e6c00616f7aae90e2cbef94888ccf6e60",
+      "bytes": 39992
+    },
+    {
+      "source": ".github/workflows/deploy-printbench-3d.yml",
+      "target": "handoff/grow-central-extraction/original-workflows/deploy-printbench-3d.yml.txt",
+      "sha256": "d484956e204b9d4eb2c486272ec2c4c16964381dc44f34cb6f970fd273eb5a49",
+      "bytes": 2415
+    },
+    {
+      "source": ".github/workflows/build-rpi4-case-stl.yml",
+      "target": "handoff/grow-central-extraction/original-workflows/build-rpi4-case-stl.yml.txt",
+      "sha256": "43a06cc7aba5fbd63f5b8d9b423c9e135e0e31dc6451a458451ef3b24e712918",
+      "bytes": 3124
+    },
+    {
+      "source": "website/deploy-trigger-2026-09-19-rpi4-stl.txt",
+      "target": "handoff/grow-central-extraction/original-workflows/deploy-trigger-2026-09-19-rpi4-stl.txt.txt",
+      "sha256": "1c216c17f66e6c31e55d07e72508011f15cf7863e748f1b62ade4b74a36209db",
+      "bytes": 74
+    },
+    {
+      "source": ".github/workflows/deploy-printbench-3d.yml",
+      "source_commit": "d9222496b86235707f8166deda106d8e37f92e89",
+      "target": "handoff/grow-central-extraction/original-workflows/latest-deploy-printbench-3d.yml.txt",
+      "sha256": "c9582c45a126fc876f799a07b359c6939f799a48706b610cf46880a59330b09b",
+      "bytes": 3326
+    },
+    {
+      "source": ".github/workflows/diag-printbench-firewall.yml",
+      "source_commit": "d9222496b86235707f8166deda106d8e37f92e89",
+      "target": "handoff/grow-central-extraction/original-workflows/latest-diag-printbench-firewall.yml.txt",
+      "sha256": "df87d186ba511883696d59feec24bd606057854c403146b271ac3e5869d9cc61",
+      "bytes": 1300
+    }
+  ]
+}
