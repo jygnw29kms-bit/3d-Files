@@ -54,15 +54,30 @@ For an already completed dependency tree, use:
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_printbench_orca.ps1 -SkipDependencies
 ```
 
-The script bootstraps the local Windows toolchain, configures the dependency and main build trees, builds the Release GUI target, and verifies that both `orca-slicer.exe` and `OrcaSlicer.dll` exist.
+The script bootstraps the local Windows toolchain, configures the dependency and main build trees, builds the Release GUI target, verifies that both `orca-slicer.exe` and `OrcaSlicer.dll` were freshly generated, and then stages the native LAN module unless `-SkipNetwork` is used.
+
+## Fresh-output rule
+
+A pre-existing EXE or DLL is **never** accepted as proof of a successful build.
+
+Immediately before the GUI build, `tools/build_printbench_orca.ps1` removes the old `orca-slicer.exe` and `OrcaSlicer.dll`. If a running PRINTBENCH/Orca process prevents cleanup, the script fails explicitly and instructs the operator to close the application.
+
+After linking, both outputs must:
+
+- exist
+- have a non-zero file size
+- have `LastWriteTimeUtc` newer than the recorded build start time
+
+This rule was added after an interrupted build left an old executable in place and made a simple existence check misleading. A build is now only reported as complete when the produced binaries are demonstrably fresh.
+
 ## Verified full Orca build
 
-The main OrcaSlicer tree now configures successfully against the local dependency prefix with Visual Studio 18 2026. The following Release targets were built successfully on this machine:
+The main OrcaSlicer tree configures successfully against the local dependency prefix with Visual Studio 18 2026. The following Release targets have been built successfully on the target Windows machine:
 
 - `OrcaSlicer` -> `build-printbench-check/src/Release/OrcaSlicer.dll`
 - `OrcaSlicer_app_gui` -> `build-printbench-check/src/Release/orca-slicer.exe`
 
-This compile includes `libslic3r_gui` and therefore verifies the PRINTBENCH `Monitor.cpp` / embedded Device Center integration at C++ build level.
+This compile includes `libslic3r_gui` and therefore verifies the PRINTBENCH native Device integration at C++ build level for the last completed build. The current FINAL-MASTER checkpoint must still be rebuilt on the Windows target after the next pull; the fresh-output rule above prevents an older executable from being mistaken for that verification.
 
 Generated dependency/build artifacts remain local and are never committed.
 
@@ -75,3 +90,19 @@ The external build tree deliberately uses a short `%LOCALAPPDATA%\\PB\\obn\\...`
 `SHA256SUMS.txt` is generated during staging. On startup `PrintbenchNetworkBootstrap` verifies the bundled DLLs against that manifest before copying them into the private `PrintbenchStudio/plugins` profile. This integrity pin is required because the private PRINTBENCH network module is not distributed with Bambu's module signature.
 
 Verified on the target Windows PC: PRINTBENCH provisioned network module `02.03.00.99`, loaded it successfully, discovered the P2S directly over LAN, populated AMS 2 Pro slot data, and resolved the native RTSPS camera path without a Raspberry Pi or Bambu Studio process.
+
+## Next Windows verification after pull
+
+1. Pull `main`.
+2. Ensure no PRINTBENCH/Orca instance is running.
+3. Run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_printbench_orca.ps1 -SkipDependencies
+```
+
+4. Accept the build only if the script ends with `PRINTBENCH Orca build complete with fresh outputs.`
+5. Start the newly generated executable.
+6. Open `Device -> PRINTBENCH` and compare the native panel directly against `docs/design/PRINTBENCH_FINAL_MASTER.webp`.
+7. Verify P2S LAN status, AMS 2 Pro slots, native camera, temperature chart and state-gated controls.
+8. Do not mark the FINAL-MASTER UI complete until the visual comparison meets the design source of truth.
