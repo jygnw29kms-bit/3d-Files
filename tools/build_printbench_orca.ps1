@@ -43,14 +43,41 @@ Write-Host '== Configure PRINTBENCH Orca =='
     -DCMAKE_BUILD_TYPE=Release
 if ($LASTEXITCODE -ne 0) { throw 'PRINTBENCH Orca configure failed' }
 
+$Exe = Join-Path $MainBuild 'src\Release\orca-slicer.exe'
+$Dll = Join-Path $MainBuild 'src\Release\OrcaSlicer.dll'
+$BuildStartedUtc = [DateTime]::UtcNow
+
+Write-Host '== Remove stale PRINTBENCH outputs =='
+foreach ($Output in @($Exe, $Dll)) {
+    if (Test-Path $Output) {
+        try {
+            Remove-Item -LiteralPath $Output -Force
+        }
+        catch {
+            throw "Could not remove stale build output '$Output'. Close any running PRINTBENCH/Orca process and retry. $($_.Exception.Message)"
+        }
+    }
+    if (Test-Path $Output) {
+        throw "Stale build output still exists after cleanup: $Output"
+    }
+}
+
 Write-Host '== Build PRINTBENCH Orca GUI =='
 & $CMake --build $MainBuild --config Release --target OrcaSlicer_app_gui -- /m:$Jobs
 if ($LASTEXITCODE -ne 0) { throw 'PRINTBENCH Orca GUI build failed' }
 
-$Exe = Join-Path $MainBuild 'src\Release\orca-slicer.exe'
-$Dll = Join-Path $MainBuild 'src\Release\OrcaSlicer.dll'
-if (-not (Test-Path $Exe)) { throw "Missing build output: $Exe" }
-if (-not (Test-Path $Dll)) { throw "Missing build output: $Dll" }
+foreach ($Output in @($Exe, $Dll)) {
+    if (-not (Test-Path $Output)) {
+        throw "Missing fresh build output: $Output"
+    }
+    $Item = Get-Item -LiteralPath $Output
+    if ($Item.LastWriteTimeUtc -lt $BuildStartedUtc) {
+        throw "Build output is stale: $Output ($($Item.LastWriteTimeUtc.ToString('o')) < $($BuildStartedUtc.ToString('o')))"
+    }
+    if ($Item.Length -le 0) {
+        throw "Build output is empty: $Output"
+    }
+}
 
 if (-not $SkipNetwork) {
     Write-Host '== Build and stage PRINTBENCH native Bambu LAN module =='
@@ -60,6 +87,8 @@ if (-not $SkipNetwork) {
     if ($LASTEXITCODE -ne 0) { throw 'PRINTBENCH network package build failed' }
 }
 
-Write-Host 'PRINTBENCH Orca build complete.'
-Write-Host "EXE: $Exe"
-Write-Host "DLL: $Dll"
+$ExeItem = Get-Item -LiteralPath $Exe
+$DllItem = Get-Item -LiteralPath $Dll
+Write-Host 'PRINTBENCH Orca build complete with fresh outputs.'
+Write-Host "EXE: $Exe  $($ExeItem.LastWriteTimeUtc.ToString('o'))  $($ExeItem.Length) bytes"
+Write-Host "DLL: $Dll  $($DllItem.LastWriteTimeUtc.ToString('o'))  $($DllItem.Length) bytes"
