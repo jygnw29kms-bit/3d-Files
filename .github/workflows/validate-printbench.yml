@@ -34,6 +34,7 @@ jobs:
           tests/test_control_security.py
           tests/test_device_info.py
           tests/test_master_ui.py
+          tests/test_native_final_master_contract.py
       - name: Check Pi Python syntax
         run: |
           python -m py_compile \
