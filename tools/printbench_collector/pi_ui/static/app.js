@@ -10,6 +10,7 @@ const api = p => fetch('/api/v1' + p, {cache:'no-store'}).then(async r => {
 
 let lastHistory = [];
 let cameraStarted = false;
+let cameraTimer = null;
 let currentView = 'overview';
 let nativeControlAuthorized = false;
 let latestCaps = {controls:{}, features:{}};
@@ -119,13 +120,22 @@ function renderDrying(ams) {
 }
 
 function updateCamera(camOk, live, sys) {
-  $('camera').textContent = camOk ? 'MJPEG Bridge bereit' : live.camera?.printer_liveview ? 'P2S Stream aktiv / Bridge wartet' : 'Bridge aus';
+  $('camera').textContent = camOk ? 'Snapshot Live bereit' : live.camera?.printer_liveview ? 'P2S Stream aktiv / Bridge wartet' : 'Bridge aus';
   $('cameraAge').textContent = sys.camera_snapshot_age_sec != null ? 'letztes Bild ' + Math.round(sys.camera_snapshot_age_sec) + ' s' : 'kein aktuelles Bild';
   const shouldStream = camOk && currentView === 'overview';
   $('cameraOverlay').style.display = shouldStream ? 'none' : 'grid';
   $('cameraOverlay').textContent = camOk ? 'Livefeed pausiert ausserhalb der Übersicht' : 'warte auf Kamera...';
-  if (shouldStream && !cameraStarted) { $('cameraImage').src = '/camera/stream.mjpg'; cameraStarted = true; }
-  else if (!shouldStream && cameraStarted) { $('cameraImage').removeAttribute('src'); cameraStarted = false; }
+  const refreshSnapshot = () => { if (cameraStarted && currentView === 'overview') $('cameraImage').src = '/camera/latest.jpg?ts=' + Date.now(); };
+  if (shouldStream && !cameraStarted) {
+    cameraStarted = true;
+    refreshSnapshot();
+    cameraTimer = setInterval(refreshSnapshot, 1000);
+  } else if (!shouldStream && cameraStarted) {
+    cameraStarted = false;
+    if (cameraTimer) clearInterval(cameraTimer);
+    cameraTimer = null;
+    $('cameraImage').removeAttribute('src');
+  }
 }
 
 function controlArgs(button) {
@@ -198,7 +208,7 @@ async function refreshFast() {
     $('amsTemp').textContent = c(live.ams?.temp_c); $('amsHum').textContent = fmt(live.ams?.humidity_raw ?? live.ams?.humidity);
     const a = live.ams?.active_slot; $('amsActive').textContent = (a == null || a === '' || String(a) === '255') ? '-' : 'SLOT ' + (Number(a)+1);
     renderSlots(live.ams || {}); renderDrying(live.ams || {});
-    $('wifi').textContent = live.wifi_rssi != null ? Math.round(live.wifi_rssi) + ' dBm' : '-'; $('hms').textContent = fmt(live.hms_count);
+    const wifi = Number(live.wifi_rssi); $('wifi').textContent = Number.isFinite(wifi) ? Math.round(wifi) + ' dBm' : '-'; $('hms').textContent = fmt(live.hms_count);
     $('collector').textContent = sys.collector || '-'; $('collector2').textContent = sys.collector || '-'; $('readerBridge').textContent = sys.reader_bridge || 'inactive';
     $('collectorSide').textContent = `Collector ${sys.collector || '-'}`; $('piTemp').textContent = c(sys.pi_temp_c); $('piTemp2').textContent = c(sys.pi_temp_c);
     $('hostName').textContent = sys.hostname || '-'; $('uptime').textContent = sec(sys.uptime_sec); $('disk').textContent = sys.disk ? `${sys.disk.free_gb} / ${sys.disk.total_gb} GB frei` : '-';
@@ -210,15 +220,21 @@ async function refreshFast() {
 }
 
 async function refreshSlow() {
-  try {
-    const [rfid, external, sessions, hist, spools, caps, firmware, control] = await Promise.all([
-      api('/rfid'), api('/external-tags?limit=24'), api('/sessions?limit=30'), api('/history?hours=24&limit=180'), api('/spools'), api('/capabilities'), api('/firmware'), api('/control-capabilities')
-    ]);
-    nativeControlAuthorized = !!control.browser_write_endpoint;
-    latestCaps = {...caps, controls:control.items || {}};
-    renderRfid(rfid); renderExternalTags(external); renderSessions(sessions); renderSpools(spools); renderCaps(latestCaps); renderFirmware(firmware);
-    lastHistory = hist.points || []; drawChart(lastHistory);
-  } catch (e) { console.error(e); }
+  const jobs = [
+    api('/rfid').then(renderRfid),
+    api('/external-tags?limit=24').then(renderExternalTags),
+    api('/sessions?limit=30').then(renderSessions),
+    api('/history?hours=24&limit=180').then(hist => { lastHistory = hist.points || []; drawChart(lastHistory); }),
+    api('/spools').then(renderSpools),
+    api('/firmware').then(renderFirmware),
+    Promise.all([api('/capabilities'), api('/control-capabilities')]).then(([caps, control]) => {
+      nativeControlAuthorized = !!control.browser_write_endpoint;
+      latestCaps = {...caps, controls:control.items || {}};
+      renderCaps(latestCaps);
+    })
+  ];
+  const results = await Promise.allSettled(jobs);
+  results.forEach((r, i) => { if (r.status === 'rejected') console.error('slow API', i, r.reason); });
 }
 
 const mobileNavToggle = $('mobileNavToggle');
@@ -238,7 +254,12 @@ document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click'
   document.querySelectorAll('[data-view-panel]').forEach(x => x.classList.toggle('active', x.dataset.viewPanel === currentView));
   $('pageTitle').textContent = {overview:'Bambu Lab P2S', control:'Steuerung', ams:'AMS 2 Pro', spools:'Material / Spulen', prints:'Drucke / Historie', system:'System / Bridge'}[currentView] || 'PRINTBENCH';
   setMobileNav(false);
-  if (currentView !== 'overview' && cameraStarted) { $('cameraImage').removeAttribute('src'); cameraStarted = false; }
+  if (currentView !== 'overview' && cameraStarted) {
+    cameraStarted = false;
+    if (cameraTimer) clearInterval(cameraTimer);
+    cameraTimer = null;
+    $('cameraImage').removeAttribute('src');
+  }
 }));
 
 refreshFast(); refreshSlow(); setInterval(refreshFast, 5000); setInterval(refreshSlow, 30000); window.addEventListener('resize', () => drawChart(lastHistory));
