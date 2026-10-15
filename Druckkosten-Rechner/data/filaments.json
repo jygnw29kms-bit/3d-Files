@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-14T10:18:18+00:00",
+  "updated": "2026-10-15T10:01:59+00:00",
   "sources": [
     {
       "name": "3D Filament Profiles",
@@ -251,23 +251,9 @@
       "url": "https://spulenheld.de/deals/abs"
     },
     {
-      "brand": "KINGROON",
-      "material": "ABS",
-      "eur_per_kg": 12.59,
-      "source": "Spulenheld",
-      "url": "https://spulenheld.de/deals/abs"
-    },
-    {
       "brand": "JAYO",
       "material": "ABS",
       "eur_per_kg": 14.89,
-      "source": "Spulenheld",
-      "url": "https://spulenheld.de/deals/abs"
-    },
-    {
-      "brand": "Polymaker",
-      "material": "ABS",
-      "eur_per_kg": 25.0,
       "source": "Spulenheld",
       "url": "https://spulenheld.de/deals/abs"
     },
