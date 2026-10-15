@@ -40,6 +40,21 @@ This is now verified for OpenCV and OCCT.
 
 The OCCT build is intentionally verbose on current MSVC because its C++17-era sources emit many `std::iterator` deprecation warnings. These warnings are not treated as successful-build proof or failure by themselves; the ExternalProject completion marker and installed artifacts are authoritative.
 
+## One-command build
+
+From the repository root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_printbench_orca.ps1
+```
+
+For an already completed dependency tree, use:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_printbench_orca.ps1 -SkipDependencies
+```
+
+The script bootstraps the local Windows toolchain, configures the dependency and main build trees, builds the Release GUI target, and verifies that both `orca-slicer.exe` and `OrcaSlicer.dll` exist.
 ## Verified full Orca build
 
 The main OrcaSlicer tree now configures successfully against the local dependency prefix with Visual Studio 18 2026. The following Release targets were built successfully on this machine:
