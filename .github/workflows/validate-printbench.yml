@@ -33,6 +33,7 @@ jobs:
           tests/test_command_engine.py
           tests/test_control_security.py
           tests/test_device_info.py
+          tests/test_master_ui.py
       - name: Check Pi Python syntax
         run: |
           python -m py_compile \

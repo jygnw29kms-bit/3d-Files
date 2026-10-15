@@ -75,7 +75,10 @@ function renderCaps(caps) {
   $('caps').innerHTML = Object.entries(f).map(([k, v]) => `<div><span>${esc(k.replaceAll('_',' '))}</span><b class="${v ? 'yes' : 'no'}">${v ? 'JA' : 'NEIN'}</b></div>`).join('');
   const controls = caps.controls || {};
   $('controlCaps').innerHTML = Object.entries(controls).map(([k, v]) => `<div><span>${esc(k)}</span><b class="${v.enabled ? 'yes' : 'no'}">${esc(v.status || '-')}</b></div>`).join('');
-  $('controlState').textContent = nativeControlAuthorized && Object.values(controls).some(v => v.enabled) ? 'ORCA CONTROL AKTIV · TOKEN + POLICY' : 'BROWSER READ ONLY · ORCA TOKEN ERFORDERLICH';
+  const controlReady = nativeControlAuthorized && Object.values(controls).some(v => v.enabled);
+  $('controlState').textContent = controlReady ? 'ORCA CONTROL AKTIV · TOKEN + POLICY' : 'BROWSER READ ONLY · ORCA TOKEN ERFORDERLICH';
+  $('controlOverview').textContent = controlReady ? 'ORCA CONTROL' : 'READ ONLY';
+  $('quickControlStatus').textContent = controlReady ? 'CONTROL AKTIV' : 'READ ONLY';
   refreshControlButtons();
 }
 
@@ -88,7 +91,10 @@ function renderExternalTags(x) {
 }
 
 function renderSessions(rows) {
-  $('sessions').innerHTML = (rows || []).map(s => `<div class="session"><b>${esc(new Date(s.started_at).toLocaleString('de-DE'))}</b><span>${esc(s.outcome || s.state || '-')}</span><span>${esc((s.filament_vendor || '') + ' ' + (s.filament_type || '-'))}</span><span>${s.planned_filament_g != null ? Math.round(s.planned_filament_g) + ' g' : '-'}</span><span>${s.actual_time_sec ? Math.round(s.actual_time_sec / 60) + ' min' : '-'}</span><span>${s.self_cost_eur != null ? Number(s.self_cost_eur).toFixed(2) + ' €' : '-'}</span></div>`).join('') || '<p class="empty">Keine Drucksessions gespeichert.</p>';
+  const item = s => `<div class="session"><b>${esc(new Date(s.started_at).toLocaleString('de-DE'))}</b><span>${esc(s.outcome || s.state || '-')}</span><span>${esc((s.filament_vendor || '') + ' ' + (s.filament_type || '-'))}</span><span>${s.planned_filament_g != null ? Math.round(s.planned_filament_g) + ' g' : '-'}</span><span>${s.actual_time_sec ? Math.round(s.actual_time_sec / 60) + ' min' : '-'}</span><span>${s.self_cost_eur != null ? Number(s.self_cost_eur).toFixed(2) + ' €' : '-'}</span></div>`;
+  $('sessions').innerHTML = (rows || []).map(item).join('') || '<p class="empty">Keine Drucksessions gespeichert.</p>';
+  const recent = (rows || []).slice(0, 4);
+  $('sessionsOverview').innerHTML = recent.length ? recent.map(item).join('') : '<p class="empty">Noch keine Drucksessions.</p>';
 }
 
 function renderFirmware(x) {
@@ -177,12 +183,16 @@ async function refreshFast() {
   try {
     const [live, sys] = await Promise.all([api('/live'), api('/system')]); latestLive = live;
     $('onlineText').textContent = live.online ? 'ONLINE' : 'STALE'; $('onlineDot').style.background = live.online ? '#3fe58b' : '#ff6474';
-    $('age').textContent = `letztes Telegramm vor ${fmt(live.age_sec)} s`; $('state').textContent = live.print_state || 'UNBEKANNT';
+    $('printerStatusText').textContent = live.online ? 'ONLINE / BEREIT' : 'TELEMETRIE STALE';
+    $('printerStatusDot').style.background = live.online ? '#4ee59b' : '#ff5f72';
+    $('printerStatusAge').textContent = `vor ${fmt(live.age_sec)} s`;
+    $('age').textContent = `letztes Telegramm vor ${fmt(live.age_sec)} s`; $('state').textContent = live.print_state || 'UNBEKANNT'; $('stateHero').textContent = live.print_state || 'UNBEKANNT';
     const p = Math.max(0, Math.min(100, Math.round(live.progress || 0))); $('progress').textContent = p + '%'; $('progressBar').style.width = p + '%';
     $('layer').textContent = `${fmt(live.layer_current)} / ${fmt(live.layer_total)}`; $('remain').textContent = live.remaining_min != null ? Math.round(live.remaining_min) + ' min' : '-';
     $('speed').textContent = live.speed_mag != null ? Math.round(live.speed_mag) + '%' : fmt(live.speed_level);
-    $('nozzle').textContent = c(live.nozzle_c); $('nozzleTarget').textContent = 'Ziel ' + c(live.nozzle_target_c);
-    $('bed').textContent = c(live.bed_c); $('bedTarget').textContent = 'Ziel ' + c(live.bed_target_c); $('chamber').textContent = c(live.chamber_c);
+    $('nozzle').textContent = c(live.nozzle_c); $('nozzleMini').textContent = c(live.nozzle_c); $('nozzleTarget').textContent = 'Ziel ' + c(live.nozzle_target_c);
+    $('bed').textContent = c(live.bed_c); $('bedMini').textContent = c(live.bed_c); $('bedTarget').textContent = 'Ziel ' + c(live.bed_target_c);
+    $('chamber').textContent = c(live.chamber_c); $('chamberMini').textContent = c(live.chamber_c);
     if (document.activeElement !== $('nozzleSet') && live.nozzle_target_c != null) $('nozzleSet').value = Math.round(live.nozzle_target_c);
     if (document.activeElement !== $('bedSet') && live.bed_target_c != null) $('bedSet').value = Math.round(live.bed_target_c);
     $('amsTemp').textContent = c(live.ams?.temp_c); $('amsHum').textContent = fmt(live.ams?.humidity_raw ?? live.ams?.humidity);
@@ -222,10 +232,11 @@ navScrim?.addEventListener('click', () => setMobileNav(false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') setMobileNav(false); });
 
 document.querySelectorAll('[data-control]').forEach(b => b.addEventListener('click', () => sendControl(b)));
-document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.remove('active')); b.classList.add('active'); currentView = b.dataset.view;
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+  currentView = b.dataset.view;
+  document.querySelectorAll('.side-nav [data-view],.top-nav [data-view]').forEach(x => x.classList.toggle('active', x.dataset.view === currentView));
   document.querySelectorAll('[data-view-panel]').forEach(x => x.classList.toggle('active', x.dataset.viewPanel === currentView));
-  $('pageTitle').textContent = {overview:'P2S / AMS 2 PRO', ams:'AMS 2 PRO', spools:'SPULEN / RFID', prints:'DRUCKHISTORIE', system:'SYSTEM / BRIDGE'}[currentView] || 'PRINTBENCH';
+  $('pageTitle').textContent = {overview:'Bambu Lab P2S', control:'Steuerung', ams:'AMS 2 Pro', spools:'Material / Spulen', prints:'Drucke / Historie', system:'System / Bridge'}[currentView] || 'PRINTBENCH';
   setMobileNav(false);
   if (currentView !== 'overview' && cameraStarted) { $('cameraImage').removeAttribute('src'); cameraStarted = false; }
 }));
