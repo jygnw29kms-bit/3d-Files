@@ -1,34 +1,53 @@
-# PRINTBENCH Studio Architecture
+# 135er-PRINTBENCH Architecture
 
-## Components
+## Desktop-first product
 
-1. **Desktop slicer** — OrcaSlicer 2.4.2 engine plus PRINTBENCH product restrictions and integration.
-2. **Pi bridge** — always-on local service that communicates with the P2S over LAN MQTT/RTSPS and stores sanitized operational data in SQLite.
-3. **Pi UI** — LAN-only read-only engineering/HMI interface on port 8080.
-4. **Spool layer** — generic spool inventory with optional external NTAG identification; Bambu RFID reports are a separate source and are not treated as universal UID readers.
-5. **Calibration/data** — printer/material calibration artifacts and cost/material datasets.
+135er-PRINTBENCH is one Windows application built on the OrcaSlicer 2.4.2 engine. The Windows application is the primary runtime and directly owns the complete P2S + AMS 2 Pro workflow. Bambu Studio is not part of the required stack.
 
-## Data flow
+## Native components
 
-`P2S/AMS2Pro -> collector -> SQLite -> /api/v1 -> Pi UI / PRINTBENCH Studio`
+1. **Orca slicing engine** — model preparation, slicing, profiles, print preparation and G-code generation.
+2. **PRINTBENCH native Device UI** — wxWidgets implementation of the binding FINAL-MASTER under `Device -> PRINTBENCH`.
+3. **PRINTBENCH native collector** — normalized desktop state built from Orca's native `DeviceManager` / `MachineObject` Bambu LAN model.
+4. **PRINTBENCH control layer** — capability-gated printer, AMS, camera and print commands with post-state verification.
+5. **Desktop session/history store** — print sessions, diagnostics, spool/material observations and local statistics.
+6. **Optional companion services** — Pi/mobile/browser and external reader paths; useful but not required for desktop operation.
 
-Camera flow is isolated from telemetry:
+## Primary data flow
 
-`P2S RTSPS:322 -> printbench-camera.service -> /run/printbench-camera/latest.jpg -> Pi UI`
+`P2S / AMS 2 Pro -> Orca native Bambu LAN transport -> MachineObject / DeviceCore -> PrintbenchCollector -> PrintbenchNativePanel`
 
-The browser never receives the RTSPS URL or LAN access code. The camera runtime directory is volatile under `/run`.
+Printer writes flow in the opposite direction through validated native control objects and must never expose a raw MQTT command console in the product UI.
 
-## Trust boundaries
+## FINAL-MASTER UI contract
 
-- `/etc/printbench/bambu.json`: private Pi-only printer identity/credential source.
-- `printbench.db`: local operational database; browser reads only selected fields through the API.
-- Raw MQTT payloads and RFID UIDs are diagnostic/private data and are not exposed by browser endpoints.
-- Printer writes are disabled by default and must not be coupled to UI read endpoints.
+The desktop visual source of truth is:
 
-## Media state
+- `docs/design/PRINTBENCH_FINAL_MASTER.webp`
+- `docs/design/PRINTBENCH_FINAL_MASTER.md`
 
-RTSPS input is validated at 1920x1080 H.264/30 fps. The Pi keeps a low-duty-cycle idle snapshot and switches to a bounded MJPEG bridge only while a browser viewer is active; the browser never connects to RTSPS directly. Native timelapse FTPS on port 990 is currently not enabled in the Pi UI because TCP accepts connections but the TLS handshake currently stalls on the tested printer/firmware. The system intentionally avoids retry loops until that path is understood.
+The native implementation keeps the same information hierarchy: PRINTBENCH navigation, P2S + AMS hero, printer status, live camera, current print, live temperatures, AMS slots, device status, recent prints and system/actions. Replacing a WebView with wxWidgets does not permit a visual redesign.
 
-## External reader path
+## Desktop credentials and trust boundary
 
-Open spool tags use a separate acquisition boundary: ESP32 + up to 4 RC522 -> USB CDC JSONL -> reader_serial.py -> external_tag -> spool match/proposal. Reader input never directly executes a printer write. See docs/READER-PROTOCOL.md.
+P2S LAN credentials remain local to the Windows application/profile and are never committed to Git. The desktop application talks to the printer only over the trusted LAN. Cloud access is not required for normal local operation. Printer state and credentials must not be pushed through a browser or remote bridge merely to render the desktop Device page.
+
+## Optional Pi/mobile path
+
+The existing Pi collector, browser UI, camera bridge and external reader support remain available as an optional companion for always-on/mobile use. This path is deliberately secondary:
+
+`P2S / AMS 2 Pro -> optional Pi services -> browser/mobile`
+
+A missing/offline Pi must have no effect on native desktop slicing, telemetry or printer control.
+
+## Collector strategy
+
+PRINTBENCH does not duplicate the Bambu transport unnecessarily. Where Orca already exposes reliable native state, `PrintbenchCollector` reads and normalizes that state. P2S/AMS 2 Pro fields missing from upstream Orca are added at the DeviceCore/collector boundary. This prevents competing MQTT sessions and keeps the fork maintainable.
+
+## Security rules
+
+- no credentials, tokens or raw RFID/NFC UIDs in Git;
+- no generic raw MQTT write endpoint in the native UI;
+- state-changing commands are capability-checked and fail-closed;
+- command success requires response/state validation, not publish success alone;
+- optional browser/mobile services remain isolated from desktop credentials wherever possible.

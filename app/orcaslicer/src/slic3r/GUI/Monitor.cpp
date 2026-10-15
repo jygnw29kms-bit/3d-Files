@@ -34,6 +34,7 @@
 #include "Plater.hpp"
 #include "BindDialog.hpp"
 #include "PrinterWebView.hpp"
+#include "PrintbenchNativePanel.hpp"
 
 #include "DeviceCore/DevManager.h"
 
@@ -201,30 +202,10 @@ void MonitorPanel::init_tabpanel()
     m_hms_panel = new HMSPanel(m_tabpanel);
     m_tabpanel->AddPage(m_hms_panel, _L("Assistant(HMS)"),    "", false);
 
-    // PRINTBENCH keeps printer credentials and raw Bambu transports on the local Pi bridge.
-    // The slicer embeds only the sanitized same-origin Device Center.
-    m_printbench_panel = new PrinterWebView(m_tabpanel);
+    // 135er-PRINTBENCH: native Device Center. The desktop application owns
+    // collection, presentation and control; no browser/Pi bridge is required.
+    m_printbench_panel = new PrintbenchNativePanel(m_tabpanel);
     m_tabpanel->AddPage(m_printbench_panel, _L("PRINTBENCH"), "", false);
-    wxString bridge_url;
-    if (!wxGetEnv("PRINTBENCH_BRIDGE_URL", &bridge_url) || bridge_url.empty())
-        bridge_url = "http://printbench-pi.local:8080/";
-
-    wxString control_token;
-    if (!wxGetEnv("PRINTBENCH_CONTROL_TOKEN", &control_token) || control_token.empty()) {
-        boost::nowide::ifstream token_file(Slic3r::data_dir() + "/printbench-control.token");
-        std::string token;
-        if (token_file.good() && std::getline(token_file, token) && !token.empty())
-            control_token = wxString::FromUTF8(token);
-    }
-    bool valid_control_token = control_token.length() == 64;
-    for (size_t i = 0; valid_control_token && i < control_token.length(); ++i) {
-        const wxChar ch = control_token[i];
-        valid_control_token = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
-    }
-    if (!valid_control_token)
-        control_token.clear();
-
-    m_printbench_panel->load_url(bridge_url, control_token);
 
     std::string network_ver = Slic3r::NetworkAgent::get_version();
     if (!network_ver.empty()) {
@@ -234,8 +215,8 @@ void MonitorPanel::init_tabpanel()
     m_initialized = true;
     show_status((int)MonitorStatus::MONITOR_NO_PRINTER);
 
-    // PRINTBENCH is the primary Device surface. Native Orca status/storage/HMS tabs
-    // remain available, but a missing Orca machine must not hide the local bridge.
+    // PRINTBENCH is the primary native Device surface. Native Orca status/storage/HMS
+    // tabs remain available, but the desktop product starts on PRINTBENCH.
     m_tabpanel->SetSelection(PT_PRINTBENCH);
 }
 
@@ -303,6 +284,19 @@ void MonitorPanel::on_timer(wxTimerEvent& event)
         update_all();
         //Layout();
     }
+
+    MachineObject* printbench_machine = obj;
+    if (printbench_machine == nullptr) {
+        if (auto* dev = Slic3r::GUI::wxGetApp().getDeviceManager()) {
+            printbench_machine = dev->get_selected_machine();
+            if (printbench_machine == nullptr) {
+                dev->load_last_machine();
+                printbench_machine = dev->get_selected_machine();
+            }
+        }
+    }
+    if (m_printbench_panel)
+        m_printbench_panel->refresh_from_machine(printbench_machine);
 }
 
 void MonitorPanel::on_select_printer(wxCommandEvent& event)

@@ -27,19 +27,36 @@ for nozzle in expected:
         if data.get('printer_model')!='Bambu Lab P2S':errors.append(f'Wrong printer_model in {p.name}')
 
 if CONTRACT['boundaries'].get('ams_writes_default') is not False:errors.append('AMS writes must default to false')
+if CONTRACT['desktop'].get('single_app') is not True:errors.append('PRINTBENCH must be a single desktop app')
+if CONTRACT['desktop'].get('bambu_studio_required') is not False:errors.append('Bambu Studio must not be required')
+if CONTRACT['desktop'].get('native_device_ui') is not True:errors.append('Device UI must be native')
+if CONTRACT['desktop'].get('native_collector') is not True:errors.append('Desktop collector must be native')
+if CONTRACT['desktop'].get('pi_required') is not False:errors.append('Pi must not be required for desktop operation')
+master=ROOT/CONTRACT['desktop']['final_master']
+if not master.is_file():errors.append(f'Binding FINAL-MASTER missing: {master}')
+
 wizard=(ORCA/'src'/'slic3r'/'GUI'/'ConfigWizard.cpp').read_text(encoding='utf-8',errors='ignore')
 if 'set_variant("BBL", "N7", "0.4", true)' not in wizard:errors.append('PRINTBENCH P2S default variant gate missing')
 if 'index->add_page(page_custom);' in wizard:errors.append('Custom-printer page is exposed in ConfigWizard')
 if 'vendor.id == "BBL" && model.id == "N7"' not in wizard:errors.append('P2S-only model filter missing')
 if 'set(SLIC3R_APP_NAME "PRINTBENCH Studio")' not in version:errors.append('PRINTBENCH Studio branding missing')
+
 plater=(ORCA/'src'/'slic3r'/'GUI'/'Plater.cpp').read_text(encoding='utf-8',errors='ignore')
 if 'm_printer_connect->Hide();' not in plater:errors.append('Generic print-host connection UI is exposed')
 gui_app=(ORCA/'src'/'slic3r'/'GUI'/'GUI_App.cpp').read_text(encoding='utf-8',errors='ignore')
 if 'printer presets may only extend the fixed Bambu Lab P2S family' not in gui_app:errors.append('Foreign pending printer preset filter missing')
+
+native_panel=ORCA/'src'/'slic3r'/'GUI'/'PrintbenchNativePanel.cpp'
+native_collector=ORCA/'src'/'slic3r'/'GUI'/'PrintbenchCollector.cpp'
+monitor=(ORCA/'src'/'slic3r'/'GUI'/'Monitor.cpp').read_text(encoding='utf-8',errors='ignore')
+if not native_panel.is_file():errors.append('Native PRINTBENCH panel missing')
+if not native_collector.is_file():errors.append('Native PRINTBENCH collector missing')
+if 'new PrintbenchNativePanel(m_tabpanel)' not in monitor:errors.append('Device -> PRINTBENCH is not using the native panel')
+if 'm_printbench_panel->load_url' in monitor:errors.append('PRINTBENCH Device surface still embeds a WebView URL')
 
 if errors:
     print('PRODUCT_CONTRACT_FAIL')
     for e in errors:print('-',e)
     raise SystemExit(1)
 print('PRODUCT_CONTRACT_OK')
-print('orca',CONTRACT['orca']['version'],'model_id',model['model_id'],'nozzles',','.join(map(str,expected)))
+print('orca',CONTRACT['orca']['version'],'model_id',model['model_id'],'nozzles',','.join(map(str,expected)),'native_device',True)

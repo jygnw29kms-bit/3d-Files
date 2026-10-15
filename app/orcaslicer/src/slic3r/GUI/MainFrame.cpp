@@ -1368,6 +1368,10 @@ void MainFrame::init_tabpanel() {
 
 // SoftFever
 void MainFrame::show_device(bool bBBLPrinter) {
+    // 135er-PRINTBENCH is a complete desktop product. Device always stays on the
+    // native Monitor/PRINTBENCH surface instead of the generic PhysicalPrinter web page.
+    bBBLPrinter = true;
+
     auto idx = -1;
     if (bBBLPrinter) {
         if (m_tabpanel->FindPage(m_monitor) != wxNOT_FOUND) {

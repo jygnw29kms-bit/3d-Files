@@ -55,6 +55,7 @@ namespace GUI {
 
 class MediaFilePanel;
 class PrinterWebView;
+class PrintbenchNativePanel;
 
 class AddMachinePanel : public wxPanel
 {
@@ -84,7 +85,7 @@ private:
     MediaFilePanel*     m_media_file_panel;
     UpgradePanel*       m_upgrade_panel;
     HMSPanel*           m_hms_panel;
-    PrinterWebView*      m_printbench_panel{ nullptr };
+    PrintbenchNativePanel* m_printbench_panel{ nullptr };
 
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
