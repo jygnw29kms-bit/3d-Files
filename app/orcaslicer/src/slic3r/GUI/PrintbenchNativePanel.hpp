@@ -5,11 +5,17 @@
 #include <array>
 #include <wx/scrolwin.h>
 #include <wx/stattext.h>
+#include <wx/button.h>
+
+class wxMediaCtrl2;
 
 namespace Slic3r {
 class MachineObject;
 
 namespace GUI {
+
+class MediaPlayCtrl;
+class PrintbenchTempChart;
 
 class PrintbenchNativePanel : public wxScrolledWindow
 {
@@ -23,6 +29,12 @@ private:
     void apply_snapshot(const PrintbenchSnapshot& snapshot);
 
     PrintbenchCollector m_collector;
+    MachineObject* m_machine{nullptr};
+    wxMediaCtrl2* m_media_ctrl{nullptr};
+    MediaPlayCtrl* m_media_play_ctrl{nullptr};
+    PrintbenchTempChart* m_temp_chart{nullptr};
+    wxButton* m_pause_resume{nullptr};
+    wxButton* m_light{nullptr};
     wxStaticText* m_printer_name{nullptr};
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
