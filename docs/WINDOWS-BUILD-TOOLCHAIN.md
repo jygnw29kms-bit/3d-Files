@@ -1,21 +1,52 @@
 # Windows Orca Build Toolchain
 
-PRINTBENCH/Orca on Windows requires a native Windows Perl for the bundled OpenSSL 1.1.1w dependency.
+PRINTBENCH/Orca on Windows uses the Visual Studio 18 toolchain together with a native Windows Perl/patch environment for bundled dependencies.
 
-Use:
+## Bootstrap
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/setup_windows_build_toolchain.ps1
 ```
 
-The script installs the official Strawberry Perl portable distribution into the current user's local application data directory, adds its tool directories to the user PATH, and validates that Perl reports `osname='MSWin32'`.
+The bootstrap installs the official Strawberry Perl portable distribution into the current user's local application data directory. It deliberately avoids an elevated MSI/UAC dependency and provides both native `perl.exe` and GNU `patch.exe`.
 
-This deliberately avoids an elevated MSI install and therefore does not depend on an unattended UAC approval.
+Validated local toolchain:
 
-Current validated toolchain:
+- Strawberry Perl 5.42.3 (`osname='MSWin32'`)
+- GNU patch from Strawberry Perl
+- Visual Studio 18 Community / MSVC 19.51
+- Visual Studio CMake generator `Visual Studio 18 2026`
+- Windows SDK 10.0.26100.0
+- target Windows 10.0.19045
 
-- Strawberry Perl 5.42.3 (`MSWin32`)
-- Visual Studio 18 Community CMake/MSBuild toolchain
-- Orca dependency tree under `app/orcaslicer/deps/build`
+## Important ExternalProject rule
 
-After setup, continue the OpenSSL dependency build with the Visual Studio CMake executable and then reconfigure `build-printbench-check`. Build artifacts remain local and are not committed.
+Dependency sources are extracted below `app/orcaslicer/deps/build`, which itself sits inside the parent Orca Git worktree. `git apply` may therefore treat an extracted dependency as part of the parent repository and silently fail to apply source-relative patches correctly.
+
+For patched third-party dependencies use source-relative GNU patch commands:
+
+```cmake
+PATCH_COMMAND patch -p1 -d <SOURCE_DIR> -i <patch-file>
+```
+
+This is now verified for OpenCV and OCCT.
+
+## Verified dependency progress
+
+- OpenSSL 1.1.1w: built and installed
+- CURL 7.75.0-DEV: built and installed
+- OpenCV 4.6.0: VS18 patch applied; rebuilt as `x64/vc18/staticlib`
+- OCCT 7.6.0: install-layout patch applied; rebuilt with `bin/occt`, `lib/occt`, `include/occt` layout
+
+The OCCT build is intentionally verbose on current MSVC because its C++17-era sources emit many `std::iterator` deprecation warnings. These warnings are not treated as successful-build proof or failure by themselves; the ExternalProject completion marker and installed artifacts are authoritative.
+
+## Verified full Orca build
+
+The main OrcaSlicer tree now configures successfully against the local dependency prefix with Visual Studio 18 2026. The following Release targets were built successfully on this machine:
+
+- `OrcaSlicer` -> `build-printbench-check/src/Release/OrcaSlicer.dll`
+- `OrcaSlicer_app_gui` -> `build-printbench-check/src/Release/orca-slicer.exe`
+
+This compile includes `libslic3r_gui` and therefore verifies the PRINTBENCH `Monitor.cpp` / embedded Device Center integration at C++ build level.
+
+Generated dependency/build artifacts remain local and are never committed.
