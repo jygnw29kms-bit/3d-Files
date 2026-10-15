@@ -9136,7 +9136,11 @@ void GUI_App::window_pos_center(wxTopLevelWindow *window)
 
 bool GUI_App::config_wizard_startup()
 {
-    if (!m_app_conf_exists || preset_bundle->printers.only_default_printers()) {
+    // PRINTBENCH: an existing configuration with a completed first guide is already
+    // initialized. Do not force the generic Orca wizard again merely because the
+    // current preset collection temporarily exposes only default printers.
+    const bool first_guide_finished = m_app_conf_exists && app_config != nullptr && app_config->get_bool("firstguide", "finish");
+    if (!m_app_conf_exists || (!first_guide_finished && preset_bundle->printers.only_default_printers())) {
         BOOST_LOG_TRIVIAL(info) << "run wizard...";
         run_wizard(ConfigWizard::RR_DATA_EMPTY);
         BOOST_LOG_TRIVIAL(info) << "finished run wizard";

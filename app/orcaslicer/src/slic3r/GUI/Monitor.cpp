@@ -233,6 +233,10 @@ void MonitorPanel::init_tabpanel()
 
     m_initialized = true;
     show_status((int)MonitorStatus::MONITOR_NO_PRINTER);
+
+    // PRINTBENCH is the primary Device surface. Native Orca status/storage/HMS tabs
+    // remain available, but a missing Orca machine must not hide the local bridge.
+    m_tabpanel->SetSelection(PT_PRINTBENCH);
 }
 
 void MonitorPanel::set_default()
