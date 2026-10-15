@@ -65,3 +65,13 @@ The main OrcaSlicer tree now configures successfully against the local dependenc
 This compile includes `libslic3r_gui` and therefore verifies the PRINTBENCH `Monitor.cpp` / embedded Device Center integration at C++ build level.
 
 Generated dependency/build artifacts remain local and are never committed.
+
+## Native P2S LAN module
+
+135er-PRINTBENCH bundles a pinned build of `ClusterM/open-bamboo-networking` so the Windows application can discover and control the P2S over LAN without requiring Bambu Studio. The build entry point is `tools/build_printbench_network.ps1` and the pinned source commit is recorded in that script and in the generated `SOURCE.txt` package metadata.
+
+The external build tree deliberately uses a short `%LOCALAPPDATA%\\PB\\obn\\...` path because Mosquitto/vcpkg create deeply nested MSBuild intermediates that otherwise exceed Windows path limits. Release packaging stages `bambu_networking_<version>.dll`, `BambuSource.dll` and `live555.dll` next to PRINTBENCH under `printbench-network/`.
+
+`SHA256SUMS.txt` is generated during staging. On startup `PrintbenchNetworkBootstrap` verifies the bundled DLLs against that manifest before copying them into the private `PrintbenchStudio/plugins` profile. This integrity pin is required because the private PRINTBENCH network module is not distributed with Bambu's module signature.
+
+Verified on the target Windows PC: PRINTBENCH provisioned network module `02.03.00.99`, loaded it successfully, discovered the P2S directly over LAN, populated AMS 2 Pro slot data, and resolved the native RTSPS camera path without a Raspberry Pi or Bambu Studio process.

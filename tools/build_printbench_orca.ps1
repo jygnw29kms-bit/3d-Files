@@ -1,6 +1,7 @@
 param(
     [int]$Jobs = 12,
-    [switch]$SkipDependencies
+    [switch]$SkipDependencies,
+    [switch]$SkipNetwork
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,6 +51,14 @@ $Exe = Join-Path $MainBuild 'src\Release\orca-slicer.exe'
 $Dll = Join-Path $MainBuild 'src\Release\OrcaSlicer.dll'
 if (-not (Test-Path $Exe)) { throw "Missing build output: $Exe" }
 if (-not (Test-Path $Dll)) { throw "Missing build output: $Dll" }
+
+if (-not $SkipNetwork) {
+    Write-Host '== Build and stage PRINTBENCH native Bambu LAN module =='
+    $NetworkScript = Join-Path $PSScriptRoot 'build_printbench_network.ps1'
+    $NetworkOutput = Join-Path (Split-Path $Exe) 'printbench-network'
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $NetworkScript -OutputDir $NetworkOutput -Jobs $Jobs
+    if ($LASTEXITCODE -ne 0) { throw 'PRINTBENCH network package build failed' }
+}
 
 Write-Host 'PRINTBENCH Orca build complete.'
 Write-Host "EXE: $Exe"

@@ -2,6 +2,7 @@
 #include "OrcaCloudServiceAgent.hpp"
 #include "libslic3r/Technologies.hpp"
 #include "GUI_App.hpp"
+#include "PrintbenchNetworkBootstrap.hpp"
 #include "GUI_Init.hpp"
 #include "GUI_ObjectList.hpp"
 #include "slic3r/GUI/UserManager.hpp"
@@ -3349,6 +3350,10 @@ void GUI_App::copy_network_if_available()
 
 bool GUI_App::on_init_network(bool try_backup)
 {
+    // 135er-PRINTBENCH ships its LAN networking module with the application.
+    // Provision it into this app's private profile before Orca attempts to load it.
+    provision_printbench_network(app_config, data_dir());
+
     // Clean up stale ".old" files left by install_plugin() when it had to rename an in-use
     // DLL aside (see the rename-aside path in install_plugin). This runs before the plug-in
     // is (re)loaded - at startup nothing is mapped yet, and on a hot reload the previous

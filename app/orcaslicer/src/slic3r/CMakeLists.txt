@@ -329,6 +329,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/PrintbenchCollector.hpp
     GUI/PrintbenchNativePanel.cpp
     GUI/PrintbenchNativePanel.hpp
+    GUI/PrintbenchNetworkBootstrap.cpp
+    GUI/PrintbenchNetworkBootstrap.hpp
     GUI/MonitorPage.cpp
     GUI/MonitorPage.hpp
     GUI/Mouse3DController.cpp
