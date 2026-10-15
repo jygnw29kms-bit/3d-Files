@@ -3565,20 +3565,11 @@ void GUI_App::switch_printer_agent()
         return;
     }
 
-    // Read printer_agent from config, falling back to default
-    std::string effective_agent_id = ORCA_PRINTER_AGENT_ID;
-    std::string cloud_agent_id = ORCA_CLOUD_PROVIDER;
-    if (preset_bundle->is_bbl_vendor()) {
-        effective_agent_id = BBL_PRINTER_AGENT_ID;
-        cloud_agent_id = BBL_CLOUD_PROVIDER;
-    } else {
-        const DynamicPrintConfig& config = preset_bundle->printers.get_edited_preset().config;
-        if (config.has("printer_agent")) {
-            const std::string& value = config.option<ConfigOptionString>("printer_agent")->value;
-            if (!value.empty())
-                effective_agent_id = value;
-        }
-    }
+    // 135er-PRINTBENCH is a P2S-only desktop product. Keep the native Bambu
+    // LAN agent active regardless of stale/imported Orca presets so Device telemetry
+    // and control cannot silently fall back to a generic printer agent.
+    const std::string effective_agent_id = BBL_PRINTER_AGENT_ID;
+    const std::string cloud_agent_id = BBL_CLOUD_PROVIDER;
 
     // Check if agent is registered
     if (!NetworkAgentFactory::is_printer_agent_registered(effective_agent_id)) {
