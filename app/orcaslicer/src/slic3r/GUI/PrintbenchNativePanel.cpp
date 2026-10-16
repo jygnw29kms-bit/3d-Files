@@ -119,20 +119,23 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     SetScrollRate(0, FromDIP(12));
 
     auto* shell = new wxBoxSizer(wxHORIZONTAL);
-    // FINAL-MASTER uses a compact 3:2 dashboard composition. On ultrawide
-    // displays the dashboard stays centered instead of stretching every card.
-    shell->AddStretchSpacer(1);
+    // FINAL-MASTER fills the available desktop viewport edge-to-edge.
 
     auto* sidebar = new wxPanel(this, wxID_ANY);
     sidebar->SetBackgroundColour(wxColour(4, 14, 24));
-    sidebar->SetMinSize(wxSize(FromDIP(220), -1));
+    sidebar->SetMinSize(wxSize(FromDIP(180), -1));
     auto* side = new wxBoxSizer(wxVERTICAL);
+    auto* brand_row = new wxBoxSizer(wxHORIZONTAL);
+    auto brand_icon_bitmap = create_scaled_bitmap("printbench_app_icon_32", sidebar, 18);
+    auto* brand_icon = new wxStaticBitmap(sidebar, wxID_ANY, brand_icon_bitmap);
     auto* brand = new wxStaticText(sidebar, wxID_ANY, "PRINTBENCH");
-    style_label(brand, 20, true);
-    side->Add(brand, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(22));
-    auto* brand_sub = new wxStaticText(sidebar, wxID_ANY, wxString(L"\u0053tudio  \u2022  Bambu Integration"));
+    style_label(brand, 18, true);
+    brand_row->Add(brand_icon, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, FromDIP(8));
+    brand_row->Add(brand, 0, wxALIGN_CENTER_VERTICAL);
+    side->Add(brand_row, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(16));
+    auto* brand_sub = new wxStaticText(sidebar, wxID_ANY, wxString(L"Studio  \u2022  JL1976 Software"));
     style_label(brand_sub, 9, false, PB_ACCENT);
-    side->Add(brand_sub, 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(22));
+    side->Add(brand_sub, 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(16));
     const std::array<wxString, 13> nav_items{
         wxString(L"\u00DCbersicht"), L"Live Ansicht", L"Steuerung", L"AMS 2 Pro", L"Material",
         wxString(L"Druckauftr\u00E4ge"), L"Historie", L"Dateien", L"Kamera", wxString(L"Ger\u00E4te-Setup"),
@@ -142,26 +145,25 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         item->SetBackgroundColour(i == 0 ? wxColour(8, 102, 218) : sidebar->GetBackgroundColour());
         auto* item_sizer = new wxBoxSizer(wxHORIZONTAL);
         auto* label = new wxStaticText(item, wxID_ANY, nav_items[i]);
-        style_label(label, 11, i == 0, i == 0 ? *wxWHITE : PB_TEXT);
-        item_sizer->Add(label, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(13));
+        style_label(label, 10, i == 0, i == 0 ? *wxWHITE : PB_TEXT);
+        item_sizer->Add(label, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(9));
         item->SetSizer(item_sizer);
-        side->Add(item, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(5));
+        side->Add(item, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(3));
     }
     side->AddStretchSpacer();
     auto* side_p2s = new wxStaticText(sidebar, wxID_ANY, wxString(L"\u25CF  Bambu Lab P2S"));
     style_label(side_p2s, 9, true, PB_OK);
-    side->Add(side_p2s, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(22));
+    side->Add(side_p2s, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(16));
     auto* side_ams = new wxStaticText(sidebar, wxID_ANY, wxString(L"\u25CF  AMS 2 Pro"));
     style_label(side_ams, 9, true, PB_OK);
-    side->Add(side_ams, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(22));
+    side->Add(side_ams, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(16));
     auto* system_item = new wxStaticText(sidebar, wxID_ANY, wxString(L"\u2699  System"));
     style_label(system_item, 11, false, PB_TEXT);
-    side->Add(system_item, 0, wxALL, FromDIP(22));
+    side->Add(system_item, 0, wxALL, FromDIP(16));
     sidebar->SetSizer(side);
     shell->Add(sidebar, 0, wxEXPAND);
 
     auto* root = new wxBoxSizer(wxVERTICAL);
-    root->SetMinSize(wxSize(FromDIP(1640), -1));
     auto* header = new wxBoxSizer(wxHORIZONTAL);
     const std::array<wxString, 6> top_items{L"Drucker", L"Slicer", wxString(L"Ger\u00E4te"), L"Material", L"Historie", L"Einstellungen"};
     for (size_t i = 0; i < top_items.size(); ++i) {
@@ -176,27 +178,27 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
                 wxGetApp().mainframe->select_tab(i == 0 ? MainFrame::tpMonitor : MainFrame::tp3DEditor);
             });
         }
-        header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+        header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
     }
     header->AddStretchSpacer();
     m_header_status = new wxStaticText(this, wxID_ANY, wxString(L"\u25CF  P2S Offline"));
     style_label(m_header_status, 11, true, PB_MUTED);
-    header->Add(m_header_status, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
-    root->Add(header, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(18));
-    root->AddSpacer(FromDIP(10));
+    header->Add(m_header_status, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
+    root->Add(header, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+    root->AddSpacer(FromDIP(6));
 
     auto* hero = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* body = nullptr;
 
     auto* printer_card = make_card(this, "BAMBU LAB P2S", body);
-    printer_card->SetMinSize(wxSize(FromDIP(590), FromDIP(455)));
+    printer_card->SetMinSize(wxSize(FromDIP(390), FromDIP(330)));
     m_printer_name = new wxStaticText(printer_card, wxID_ANY, "Bambu Lab P2S");
-    style_label(m_printer_name, 24, true);
+    style_label(m_printer_name, 20, true);
     body->Add(m_printer_name, 0, wxBOTTOM, FromDIP(4));
     m_ready_banner = new wxStaticText(printer_card, wxID_ANY, wxString(L"\u25CF  Offline"));
     style_label(m_ready_banner, 11, true, PB_MUTED);
     body->Add(m_ready_banner, 0, wxBOTTOM, FromDIP(8));
-    auto hero_bitmap = create_scaled_bitmap("printbench_hero_p2s_ams", this, 520);
+    auto hero_bitmap = create_scaled_bitmap("printbench_hero_p2s_ams", this, 560);
     auto* hero_image = new wxStaticBitmap(printer_card, wxID_ANY, hero_bitmap);
     body->Add(hero_image, 1, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxBOTTOM, FromDIP(4));
     auto* hero_state = new wxBoxSizer(wxHORIZONTAL);
@@ -204,7 +206,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_online = add_value(printer_card, hero_state, "Verbindung");
     m_wifi = add_value(printer_card, hero_state, "WLAN");
     body->Add(hero_state, 0, wxEXPAND | wxTOP, FromDIP(6));
-    hero->Add(printer_card, 40, wxEXPAND | wxRIGHT, FromDIP(10));
+    hero->Add(printer_card, 42, wxEXPAND | wxRIGHT, FromDIP(8));
 
     auto* status_card = make_card(this, "DRUCKERSTATUS", body);
     m_status_ready = add_value(status_card, body, "Status");
@@ -213,21 +215,21 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_chamber = add_value(status_card, body, "Kammer");
     m_speed = add_value(status_card, body, "Geschwindigkeit");
     m_ams_summary = add_value(status_card, body, "AMS 2 Pro");
-    status_card->SetMinSize(wxSize(FromDIP(330), FromDIP(455)));
-    hero->Add(status_card, 27, wxEXPAND | wxRIGHT, FromDIP(10));
+    status_card->SetMinSize(wxSize(FromDIP(230), FromDIP(330)));
+    hero->Add(status_card, 24, wxEXPAND | wxRIGHT, FromDIP(8));
 
     auto* right_hero = new wxBoxSizer(wxVERTICAL);
     auto* camera_card = make_card(this, "LIVE KAMERA", body);
-    camera_card->SetMinSize(wxSize(FromDIP(500), FromDIP(300)));
+    camera_card->SetMinSize(wxSize(FromDIP(330), FromDIP(205)));
     m_camera = add_value(camera_card, body, "Kamera");
     m_media_ctrl = new wxMediaCtrl2(camera_card);
-    m_media_ctrl->SetMinSize(wxSize(FromDIP(500), FromDIP(235)));
+    m_media_ctrl->SetMinSize(wxSize(FromDIP(330), FromDIP(155)));
     m_media_ctrl->SetBackgroundColour(*wxBLACK);
     m_media_play_ctrl = new MediaPlayCtrl(camera_card, m_media_ctrl, wxDefaultPosition, wxSize(-1, FromDIP(34)));
     m_media_play_ctrl->SetBackgroundColour(PB_CARD);
     body->Add(m_media_ctrl, 1, wxEXPAND | wxTOP, FromDIP(6));
     body->Add(m_media_play_ctrl, 0, wxEXPAND | wxTOP, FromDIP(4));
-    right_hero->Add(camera_card, 1, wxEXPAND | wxBOTTOM, FromDIP(10));
+    right_hero->Add(camera_card, 1, wxEXPAND | wxBOTTOM, FromDIP(8));
 
     auto* quick_card = make_card(this, "SCHNELLSTEUERUNG", body);
     auto* controls = new wxBoxSizer(wxHORIZONTAL);
@@ -236,9 +238,9 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_stop = new wxButton(quick_card, wxID_ANY, wxString(L"\u25A0\nSTOP"));
     m_light = new wxButton(quick_card, wxID_ANY, wxString(L"\u25CF\nLICHT"));
     for (auto* button : {m_print, m_pause_resume, m_stop, m_light}) {
-        button->SetMinSize(wxSize(FromDIP(96), FromDIP(66)));
+        button->SetMinSize(wxSize(FromDIP(72), FromDIP(54)));
         wxFont button_font = button->GetFont();
-        button_font.SetPointSize(10);
+        button_font.SetPointSize(9);
         button_font.SetWeight(wxFONTWEIGHT_BOLD);
         button->SetFont(button_font);
         button->SetForegroundColour(*wxWHITE);
@@ -270,10 +272,10 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     }
     body->Add(speed_modes, 0, wxEXPAND);
     right_hero->Add(quick_card, 0, wxEXPAND);
-    hero->Add(right_hero, 35, wxEXPAND);
+    hero->Add(right_hero, 34, wxEXPAND);
 
-    root->Add(hero, 5, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
-    root->AddSpacer(FromDIP(12));
+    root->Add(hero, 5, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(12));
+    root->AddSpacer(FromDIP(8));
 
     auto* middle = new wxBoxSizer(wxHORIZONTAL);
     auto* print_card = make_card(this, "AKTUELLER DRUCK", body);
@@ -288,7 +290,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     middle->Add(print_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* temp_card = make_card(this, "TEMPERATUREN (LIVE)", body);
-    temp_card->SetMinSize(wxSize(FromDIP(360), FromDIP(245)));
+    temp_card->SetMinSize(wxSize(FromDIP(280), FromDIP(190)));
     auto* temp_values = new wxBoxSizer(wxHORIZONTAL);
     const std::array<wxString, 3> temp_names{L"D\u00DCSE", L"BETT", L"KAMMER"};
     const std::array<wxColour, 3> temp_colours{PB_ACCENT, wxColour(210,222,231), wxColour(90,145,165)};
@@ -308,7 +310,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     middle->Add(temp_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* ams_card = make_card(this, "AMS 2 PRO", body);
-    ams_card->SetMinSize(wxSize(FromDIP(390), FromDIP(245)));
+    ams_card->SetMinSize(wxSize(FromDIP(300), FromDIP(190)));
     m_ams_environment = add_value(ams_card, body, "Environment");
     auto* slot_grid = new wxFlexGridSizer(1, 4, FromDIP(8), FromDIP(8));
     for (int col = 0; col < 4; ++col)
@@ -317,14 +319,14 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         m_ams_slots[i] = new wxStaticText(ams_card, wxID_ANY, wxString::Format("SLOT %d  --", static_cast<int>(i + 1)));
         style_label(m_ams_slots[i], 10, true);
         m_ams_slots[i]->SetBackgroundColour(wxColour(8, 22, 33));
-        m_ams_slots[i]->SetMinSize(wxSize(FromDIP(100), FromDIP(92)));
+        m_ams_slots[i]->SetMinSize(wxSize(FromDIP(72), FromDIP(72)));
         slot_grid->Add(m_ams_slots[i], 1, wxEXPAND | wxALL, FromDIP(6));
     }
     body->Add(slot_grid, 0, wxEXPAND | wxTOP, FromDIP(10));
     middle->Add(ams_card, 1, wxEXPAND);
 
-    root->Add(middle, 3, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
-    root->AddSpacer(FromDIP(12));
+    root->Add(middle, 3, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(12));
+    root->AddSpacer(FromDIP(8));
 
     auto* bottom = new wxBoxSizer(wxHORIZONTAL);
     auto* device_card = make_card(this, "GERAETESTATUS", body);
@@ -372,9 +374,8 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         lamp->CtrlSetChamberLight(lamp->IsChamberLightOn() ? DevLamp::LIGHT_EFFECT_OFF : DevLamp::LIGHT_EFFECT_ON);
     });
 
-    root->Add(bottom, 2, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(28));
-    shell->Add(root, 0, wxEXPAND);
-    shell->AddStretchSpacer(1);
+    root->Add(bottom, 2, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
+    shell->Add(root, 1, wxEXPAND);
     SetSizer(shell);
     Layout();
 }
@@ -386,14 +387,14 @@ wxPanel* PrintbenchNativePanel::make_card(wxWindow* parent, const wxString& titl
     auto* outer = new wxBoxSizer(wxVERTICAL);
     auto* heading = new wxStaticText(card, wxID_ANY, title);
     style_label(heading, 11, true, PB_ACCENT);
-    outer->Add(heading, 0, wxALL, FromDIP(14));
+    outer->Add(heading, 0, wxALL, FromDIP(10));
     auto* line = new wxStaticLine(card, wxID_ANY);
     line->SetForegroundColour(PB_BORDER);
-    outer->Add(line, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(14));
+    outer->Add(line, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
     body = new wxBoxSizer(wxVERTICAL);
-    outer->Add(body, 1, wxEXPAND | wxALL, FromDIP(14));
+    outer->Add(body, 1, wxEXPAND | wxALL, FromDIP(10));
     card->SetSizer(outer);
-    card->SetMinSize(wxSize(FromDIP(220), FromDIP(150)));
+    card->SetMinSize(wxSize(FromDIP(180), FromDIP(120)));
     return card;
 }
 
@@ -406,7 +407,7 @@ wxStaticText* PrintbenchNativePanel::add_value(wxWindow* parent, wxSizer* sizer,
     style_label(value, 12, true);
     row->Add(name, 1, wxALIGN_CENTER_VERTICAL);
     row->Add(value, 0, wxALIGN_CENTER_VERTICAL);
-    sizer->Add(row, 0, wxEXPAND | wxBOTTOM, FromDIP(9));
+    sizer->Add(row, 0, wxEXPAND | wxBOTTOM, FromDIP(6));
     return value;
 }
 
