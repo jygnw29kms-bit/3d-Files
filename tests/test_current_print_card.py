@@ -18,3 +18,10 @@ def test_current_print_card_has_master_metric_hierarchy():
 def test_remaining_time_formats_hours_when_needed():
     assert 'minutes >= 60' in PANEL
     assert '%d h %02d min' in PANEL
+
+
+def test_progress_bar_is_printbench_painted_not_native_windows_gauge():
+    assert 'class PrintbenchProgressBar : public wxPanel' in PANEL
+    assert 'dc.SetBrush(wxBrush(PB_ACCENT))' in PANEL
+    assert 'new PrintbenchProgressBar(print_card)' in PANEL
+    assert 'new wxGauge(print_card' not in PANEL

@@ -17,6 +17,7 @@ namespace GUI {
 
 class MediaPlayCtrl;
 class PrintbenchTempChart;
+class PrintbenchProgressBar;
 
 class PrintbenchNativePanel : public wxScrolledWindow
 {
@@ -45,7 +46,7 @@ private:
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
     wxStaticText* m_job_name{nullptr};
-    wxGauge* m_progress_gauge{nullptr};
+    PrintbenchProgressBar* m_progress_gauge{nullptr};
     wxStaticText* m_progress{nullptr};
     wxStaticText* m_layers{nullptr};
     wxStaticText* m_remaining{nullptr};

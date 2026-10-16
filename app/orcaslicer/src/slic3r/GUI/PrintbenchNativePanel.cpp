@@ -112,6 +112,51 @@ private:
     std::deque<std::array<double, 3>> m_samples;
 };
 
+class PrintbenchProgressBar : public wxPanel
+{
+public:
+    explicit PrintbenchProgressBar(wxWindow* parent)
+        : wxPanel(parent, wxID_ANY)
+    {
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        SetMinSize(wxSize(-1, FromDIP(10)));
+        Bind(wxEVT_PAINT, &PrintbenchProgressBar::on_paint, this);
+    }
+
+    void SetValue(int value)
+    {
+        const int next = std::clamp(value, 0, 100);
+        if (next == m_value)
+            return;
+        m_value = next;
+        Refresh(false);
+    }
+
+private:
+    void on_paint(wxPaintEvent&)
+    {
+        wxAutoBufferedPaintDC dc(this);
+        const wxSize size = GetClientSize();
+        dc.SetBackground(wxBrush(PB_CARD));
+        dc.Clear();
+        if (size.x <= 0 || size.y <= 0)
+            return;
+
+        const int radius = std::max(1, FromDIP(3));
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.SetBrush(wxBrush(PB_BORDER));
+        dc.DrawRoundedRectangle(0, 0, size.x, size.y, radius);
+        if (m_value <= 0)
+            return;
+
+        const int fill_width = std::max(FromDIP(3), (size.x * m_value) / 100);
+        dc.SetBrush(wxBrush(PB_ACCENT));
+        dc.DrawRoundedRectangle(0, 0, fill_width, size.y, radius);
+    }
+
+    int m_value{0};
+};
+
 PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     : wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxTAB_TRAVERSAL)
 {
@@ -303,9 +348,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     job_row->Add(job_text, 1, wxALIGN_CENTER_VERTICAL);
     body->Add(job_row, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
 
-    m_progress_gauge = new wxGauge(print_card, wxID_ANY, 100, wxDefaultPosition, wxSize(-1, FromDIP(10)), wxGA_HORIZONTAL);
-    m_progress_gauge->SetForegroundColour(PB_ACCENT);
-    m_progress_gauge->SetBackgroundColour(PB_BORDER);
+    m_progress_gauge = new PrintbenchProgressBar(print_card);
     body->Add(m_progress_gauge, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
 
     auto* print_metrics = new wxBoxSizer(wxHORIZONTAL);
