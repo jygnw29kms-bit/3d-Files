@@ -168,9 +168,9 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
     }
     header->AddStretchSpacer();
-    auto* header_status = new wxStaticText(this, wxID_ANY, wxString(L"\u25CF  P2S Online"));
-    style_label(header_status, 11, true, PB_OK);
-    header->Add(header_status, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+    m_header_status = new wxStaticText(this, wxID_ANY, wxString(L"\u25CF  P2S Offline"));
+    style_label(m_header_status, 11, true, PB_MUTED);
+    header->Add(m_header_status, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
     root->Add(header, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(18));
     root->AddSpacer(FromDIP(10));
 
@@ -182,9 +182,9 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_printer_name = new wxStaticText(printer_card, wxID_ANY, "Bambu Lab P2S");
     style_label(m_printer_name, 24, true);
     body->Add(m_printer_name, 0, wxBOTTOM, FromDIP(4));
-    auto* ready_text = new wxStaticText(printer_card, wxID_ANY, wxString(L"\u25CF  Bereit zum Drucken"));
-    style_label(ready_text, 11, true, PB_OK);
-    body->Add(ready_text, 0, wxBOTTOM, FromDIP(8));
+    m_ready_banner = new wxStaticText(printer_card, wxID_ANY, wxString(L"\u25CF  Offline"));
+    style_label(m_ready_banner, 11, true, PB_MUTED);
+    body->Add(m_ready_banner, 0, wxBOTTOM, FromDIP(8));
     auto hero_bitmap = create_scaled_bitmap("printbench_hero_p2s_ams", this, 455);
     auto* hero_image = new wxStaticBitmap(printer_card, wxID_ANY, hero_bitmap);
     body->Add(hero_image, 1, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxBOTTOM, FromDIP(4));
@@ -399,13 +399,23 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
     // Binding FINAL-MASTER keeps the model name dominant; the live collector
     // still supplies the connection/state data below it.
     m_printer_name->SetLabel("Bambu Lab P2S");
+    if (m_header_status) {
+        m_header_status->SetLabel(s.online ? wxString(L"\u25CF  P2S Online") : wxString(L"\u25CF  P2S Offline"));
+        m_header_status->SetForegroundColour(s.online ? PB_OK : PB_MUTED);
+    }
     m_online->SetLabel(s.online ? "ONLINE / LAN" : "OFFLINE");
     m_online->SetForegroundColour(s.online ? PB_OK : PB_MUTED);
     m_state->SetLabel(wxString::FromUTF8(s.print_state));
+    const bool ready = s.online && (s.print_state == "IDLE" || s.print_state == "FINISH" || s.print_state == "RUNNING" || s.print_state == "PAUSE");
     if (m_status_ready) {
-        const bool ready = s.online && (s.print_state == "IDLE" || s.print_state == "FINISH" || s.print_state == "RUNNING" || s.print_state == "PAUSE");
-        m_status_ready->SetLabel(ready ? L"Bereit" : wxString::FromUTF8(s.print_state));
-        m_status_ready->SetForegroundColour(ready ? PB_OK : PB_TEXT);
+        m_status_ready->SetLabel(ready ? L"Bereit" : (s.online ? wxString::FromUTF8(s.print_state) : L"Offline"));
+        m_status_ready->SetForegroundColour(ready ? PB_OK : (s.online ? PB_TEXT : PB_MUTED));
+    }
+    if (m_ready_banner) {
+        const wxString banner = ready ? wxString(L"\u25CF  Bereit zum Drucken")
+                                      : (s.online ? wxString(L"\u25CF  ") + wxString::FromUTF8(s.print_state) : wxString(L"\u25CF  Offline"));
+        m_ready_banner->SetLabel(banner);
+        m_ready_banner->SetForegroundColour(ready ? PB_OK : (s.online ? PB_TEXT : PB_MUTED));
     }
     m_wifi->SetLabel(s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal));
 

@@ -39,6 +39,8 @@ private:
     wxButton* m_light{nullptr};
     std::array<wxButton*, 4> m_speed_buttons{};
     wxStaticText* m_printer_name{nullptr};
+    wxStaticText* m_header_status{nullptr};
+    wxStaticText* m_ready_banner{nullptr};
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
     wxStaticText* m_job_name{nullptr};
