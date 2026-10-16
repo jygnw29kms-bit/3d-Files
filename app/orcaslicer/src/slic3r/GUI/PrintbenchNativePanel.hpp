@@ -57,6 +57,7 @@ private:
     wxStaticText* m_ams_summary{nullptr};
     wxStaticText* m_wifi{nullptr};
     wxStaticText* m_camera{nullptr};
+    wxStaticText* m_device_status{nullptr};
     std::array<wxStaticText*, 3> m_temp_values{};
     wxStaticText* m_ams_environment{nullptr};
     std::array<wxStaticText*, 4> m_ams_slots{};

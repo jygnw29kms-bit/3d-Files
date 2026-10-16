@@ -330,9 +330,10 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* bottom = new wxBoxSizer(wxHORIZONTAL);
     auto* device_card = make_card(this, "GERAETESTATUS", body);
-    auto* device_text = new wxStaticText(device_card, wxID_ANY, "Collector: NATIVE        LAN API: DIREKT\nTransport: Orca LAN     Modell: P2S\n\u25CF Direktverbindung     \u25CF Kamera\n\u25CF AMS Telemetrie       \u25CF Lokal / ohne Cloud");
-    style_label(device_text, 10, false, PB_MUTED);
-    body->Add(device_text, 0, wxTOP, FromDIP(4));
+    m_device_status = new wxStaticText(device_card, wxID_ANY,
+        "LAN: OFFLINE        Transport: Orca LAN\nP2S: Nicht verbunden     Kamera: --\nAMS 2 Pro: --             WLAN: --\nLokalbetrieb: AKTIV       Cloud: NICHT ERFORDERLICH");
+    style_label(m_device_status, 10, false, PB_MUTED);
+    body->Add(m_device_status, 0, wxTOP, FromDIP(4));
     bottom->Add(device_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* history_card = make_card(this, "LETZTE DRUCKE", body);
@@ -343,10 +344,32 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     bottom->Add(history_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* action_card = make_card(this, "SYSTEM & AKTIONEN", body);
-    auto* action_note = new wxStaticText(action_card, wxID_ANY,
-        "Datei senden      Drucker kalibrieren\nDrucker neu starten      AMS trocknen\nFirmware pr\u00FCfen      Logs anzeigen");
-    style_label(action_note, 9, false, PB_TEXT);
-    body->Add(action_note, 0, wxEXPAND | wxTOP, FromDIP(4));
+    auto* action_grid = new wxFlexGridSizer(2, 3, FromDIP(6), FromDIP(6));
+    for (int col = 0; col < 3; ++col)
+        action_grid->AddGrowableCol(col, 1);
+    const std::array<wxString, 6> action_names{
+        L"Datei senden", L"Kalibrieren", L"Neustart", L"AMS trocknen", L"Firmware", L"Logs anzeigen"};
+    std::array<wxButton*, 6> action_buttons{};
+    for (size_t i = 0; i < action_buttons.size(); ++i) {
+        action_buttons[i] = new wxButton(action_card, wxID_ANY, action_names[i]);
+        action_buttons[i]->SetMinSize(wxSize(FromDIP(95), FromDIP(34)));
+        action_buttons[i]->SetBackgroundColour(wxColour(8, 37, 55));
+        action_buttons[i]->SetForegroundColour(PB_TEXT);
+        action_grid->Add(action_buttons[i], 1, wxEXPAND);
+    }
+    action_buttons[0]->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
+        if (wxGetApp().mainframe)
+            wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor);
+    });
+    action_buttons[5]->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
+        if (wxGetApp().mainframe)
+            wxGetApp().mainframe->show_log_window();
+    });
+    for (size_t i : {size_t(1), size_t(2), size_t(3), size_t(4)}) {
+        action_buttons[i]->Enable(false);
+        action_buttons[i]->SetToolTip("Noch nicht verfuegbar");
+    }
+    body->Add(action_grid, 0, wxEXPAND | wxTOP, FromDIP(4));
     bottom->Add(action_card, 1, wxEXPAND);
 
     m_print->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
@@ -447,6 +470,17 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
         m_ready_banner->SetForegroundColour(ready ? PB_OK : (s.online ? PB_TEXT : PB_MUTED));
     }
     m_wifi->SetLabel(s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal));
+    if (m_device_status) {
+        const wxString lan = s.online ? "ONLINE" : "OFFLINE";
+        const wxString p2s = s.online ? "Verbunden" : "Nicht verbunden";
+        const wxString camera_state = s.has_camera ? "READY" : "--";
+        const wxString ams_state = s.has_ams ? "VERBUNDEN" : "--";
+        const wxString wifi = s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal);
+        m_device_status->SetLabel(wxString::Format(
+            "LAN: %s        Transport: Orca LAN\nP2S: %s     Kamera: %s\nAMS 2 Pro: %s             WLAN: %s\nLokalbetrieb: AKTIV       Cloud: NICHT ERFORDERLICH",
+            lan, p2s, camera_state, ams_state, wifi));
+        m_device_status->SetForegroundColour(s.online ? PB_TEXT : PB_MUTED);
+    }
 
     const bool active_print = s.print_state == "RUNNING" || s.print_state == "PAUSE";
     if (m_job_name)
