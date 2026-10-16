@@ -23,7 +23,7 @@ def test_printbench_device_surface_is_native():
 
 def test_native_panel_covers_final_master_primary_regions():
     required_labels = [
-        'P2S + AMS 2 PRO',
+        'Bambu Lab P2S',
         'DRUCKERSTATUS',
         'LIVE KAMERA',
         'AKTUELLER DRUCK',
@@ -34,6 +34,11 @@ def test_native_panel_covers_final_master_primary_regions():
         'SYSTEM & AKTIONEN',
     ]
     for label in required_labels:
+        assert label in PANEL, label
+
+    for label in ['Übersicht', 'Live Ansicht', 'Steuerung', 'Druckaufträge', 'Geräte-Setup',
+                  'Netzwerk', 'Sicherheit', 'Diagnose', 'Drucker', 'Slicer', 'Geräte',
+                  'Material', 'Historie', 'Einstellungen', 'SCHNELLSTEUERUNG']:
         assert label in PANEL, label
 
 

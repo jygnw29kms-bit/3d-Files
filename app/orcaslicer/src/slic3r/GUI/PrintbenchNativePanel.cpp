@@ -4,6 +4,7 @@
 #include "DeviceCore/DevLamp.h"
 #include "MediaPlayCtrl.h"
 #include "wxMediaCtrl2.h"
+#include "wxExtensions.hpp"
 
 #include <algorithm>
 #include <array>
@@ -113,30 +114,75 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     SetBackgroundColour(PB_BG);
     SetScrollRate(0, FromDIP(12));
 
+    auto* shell = new wxBoxSizer(wxHORIZONTAL);
+
+    auto* sidebar = new wxPanel(this, wxID_ANY);
+    sidebar->SetBackgroundColour(wxColour(4, 14, 24));
+    sidebar->SetMinSize(wxSize(FromDIP(220), -1));
+    auto* side = new wxBoxSizer(wxVERTICAL);
+    auto* brand = new wxStaticText(sidebar, wxID_ANY, "PRINTBENCH");
+    style_label(brand, 17, true);
+    side->Add(brand, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(22));
+    auto* brand_sub = new wxStaticText(sidebar, wxID_ANY, "Studio  •  Bambu Integration");
+    style_label(brand_sub, 8, false, PB_ACCENT);
+    side->Add(brand_sub, 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(22));
+
+    const std::array<wxString, 13> nav_items{
+        "Übersicht", "Live Ansicht", "Steuerung", "AMS 2 Pro", "Material",
+        "Druckaufträge", "Historie", "Dateien", "Kamera", "Geräte-Setup",
+        "Netzwerk", "Sicherheit", "Diagnose"};
+    for (size_t i = 0; i < nav_items.size(); ++i) {
+        auto* item = new wxPanel(sidebar, wxID_ANY);
+        item->SetBackgroundColour(i == 0 ? wxColour(8, 102, 218) : sidebar->GetBackgroundColour());
+        auto* item_sizer = new wxBoxSizer(wxHORIZONTAL);
+        auto* label = new wxStaticText(item, wxID_ANY, nav_items[i]);
+        style_label(label, 10, i == 0, i == 0 ? *wxWHITE : PB_TEXT);
+        item_sizer->Add(label, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(11));
+        item->SetSizer(item_sizer);
+        side->Add(item, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(8));
+    }
+    side->AddStretchSpacer();
+    auto* system_item = new wxStaticText(sidebar, wxID_ANY, "⚙  System");
+    style_label(system_item, 10, false, PB_TEXT);
+    side->Add(system_item, 0, wxALL, FromDIP(22));
+    sidebar->SetSizer(side);
+    shell->Add(sidebar, 0, wxEXPAND);
+
     auto* root = new wxBoxSizer(wxVERTICAL);
-    root->AddSpacer(FromDIP(22));
-
-    auto* eyebrow = new wxStaticText(this, wxID_ANY, "PRINTBENCH / LOCAL DEVICE CENTER");
-    style_label(eyebrow, 9, true, PB_ACCENT);
-    root->Add(eyebrow, 0, wxLEFT | wxRIGHT, FromDIP(28));
-
-    m_printer_name = new wxStaticText(this, wxID_ANY, "Bambu Lab P2S");
-    style_label(m_printer_name, 24, true);
-    root->Add(m_printer_name, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(28));
-
-    auto* subtitle = new wxStaticText(this, wxID_ANY, "P2S + AMS 2 Pro  |  Native LAN control  |  No Bambu Studio required");
-    style_label(subtitle, 10, false, PB_MUTED);
-    root->Add(subtitle, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(28));
-    root->AddSpacer(FromDIP(18));
+    auto* header = new wxBoxSizer(wxHORIZONTAL);
+    const std::array<wxString, 6> top_items{"Drucker", "Slicer", "Geräte", "Material", "Historie", "Einstellungen"};
+    for (size_t i = 0; i < top_items.size(); ++i) {
+        auto* label = new wxStaticText(this, wxID_ANY, top_items[i]);
+        style_label(label, 10, i == 0, i == 0 ? PB_ACCENT : PB_TEXT);
+        header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+    }
+    header->AddStretchSpacer();
+    auto* header_status = new wxStaticText(this, wxID_ANY, "●  P2S Online");
+    style_label(header_status, 10, true, PB_OK);
+    header->Add(header_status, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+    root->Add(header, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(18));
+    root->AddSpacer(FromDIP(6));
 
     auto* hero = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* body = nullptr;
 
-    auto* printer_card = make_card(this, "P2S + AMS 2 PRO", body);
-    m_state = add_value(printer_card, body, "Printer state");
-    m_online = add_value(printer_card, body, "Connection");
-    m_wifi = add_value(printer_card, body, "Wi-Fi");
-    hero->Add(printer_card, 2, wxEXPAND | wxRIGHT, FromDIP(10));
+    auto* printer_card = make_card(this, "BAMBU LAB P2S", body);
+    printer_card->SetMinSize(wxSize(FromDIP(560), FromDIP(390)));
+    m_printer_name = new wxStaticText(printer_card, wxID_ANY, "Bambu Lab P2S");
+    style_label(m_printer_name, 21, true);
+    body->Add(m_printer_name, 0, wxBOTTOM, FromDIP(4));
+    auto* ready_text = new wxStaticText(printer_card, wxID_ANY, "●  Bereit zum Drucken");
+    style_label(ready_text, 9, true, PB_OK);
+    body->Add(ready_text, 0, wxBOTTOM, FromDIP(8));
+    auto hero_bitmap = create_scaled_bitmap("printbench_hero_p2s_ams", this, 300);
+    auto* hero_image = new wxStaticBitmap(printer_card, wxID_ANY, hero_bitmap);
+    body->Add(hero_image, 1, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxBOTTOM, FromDIP(4));
+    auto* hero_state = new wxBoxSizer(wxHORIZONTAL);
+    m_state = add_value(printer_card, hero_state, "Druckstatus");
+    m_online = add_value(printer_card, hero_state, "Verbindung");
+    m_wifi = add_value(printer_card, hero_state, "WLAN");
+    body->Add(hero_state, 0, wxEXPAND | wxTOP, FromDIP(6));
+    hero->Add(printer_card, 5, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* status_card = make_card(this, "DRUCKERSTATUS", body);
     m_nozzle = add_value(status_card, body, "Nozzle");
@@ -144,17 +190,33 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_chamber = add_value(status_card, body, "Chamber");
     hero->Add(status_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
+    auto* right_hero = new wxBoxSizer(wxVERTICAL);
     auto* camera_card = make_card(this, "LIVE KAMERA", body);
-    camera_card->SetMinSize(wxSize(FromDIP(320), FromDIP(285)));
-    m_camera = add_value(camera_card, body, "Camera");
+    camera_card->SetMinSize(wxSize(FromDIP(360), FromDIP(250)));
+    m_camera = add_value(camera_card, body, "Kamera");
     m_media_ctrl = new wxMediaCtrl2(camera_card);
-    m_media_ctrl->SetMinSize(wxSize(FromDIP(320), FromDIP(180)));
+    m_media_ctrl->SetMinSize(wxSize(FromDIP(360), FromDIP(185)));
     m_media_ctrl->SetBackgroundColour(*wxBLACK);
-    m_media_play_ctrl = new MediaPlayCtrl(camera_card, m_media_ctrl, wxDefaultPosition, wxSize(-1, FromDIP(36)));
+    m_media_play_ctrl = new MediaPlayCtrl(camera_card, m_media_ctrl, wxDefaultPosition, wxSize(-1, FromDIP(34)));
     m_media_play_ctrl->SetBackgroundColour(PB_CARD);
-    body->Add(m_media_ctrl, 1, wxEXPAND | wxTOP, FromDIP(8));
+    body->Add(m_media_ctrl, 1, wxEXPAND | wxTOP, FromDIP(6));
     body->Add(m_media_play_ctrl, 0, wxEXPAND | wxTOP, FromDIP(4));
-    hero->Add(camera_card, 1, wxEXPAND);
+    right_hero->Add(camera_card, 1, wxEXPAND | wxBOTTOM, FromDIP(10));
+
+    auto* quick_card = make_card(this, "SCHNELLSTEUERUNG", body);
+    auto* controls = new wxBoxSizer(wxHORIZONTAL);
+    m_pause_resume = new wxButton(quick_card, wxID_ANY, "PAUSE / RESUME");
+    m_light = new wxButton(quick_card, wxID_ANY, "LICHT");
+    m_pause_resume->Enable(false);
+    m_light->Enable(false);
+    controls->Add(m_pause_resume, 1, wxRIGHT, FromDIP(8));
+    controls->Add(m_light, 1);
+    body->Add(controls, 0, wxEXPAND | wxBOTTOM, FromDIP(8));
+    auto* speed_modes = new wxStaticText(quick_card, wxID_ANY, "Leise     Standard     Sport     Ludicrous");
+    style_label(speed_modes, 9, false, PB_TEXT);
+    body->Add(speed_modes, 0, wxALIGN_CENTER_HORIZONTAL);
+    right_hero->Add(quick_card, 0, wxEXPAND);
+    hero->Add(right_hero, 3, wxEXPAND);
 
     root->Add(hero, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
     root->AddSpacer(FromDIP(12));
@@ -209,17 +271,11 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     bottom->Add(history_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* action_card = make_card(this, "SYSTEM & AKTIONEN", body);
-    auto* action_note = new wxStaticText(action_card, wxID_ANY, "Native LAN controls - state and capability gated");
-    style_label(action_note, 9, false, PB_MUTED);
-    body->Add(action_note, 0, wxBOTTOM, FromDIP(10));
-    auto* controls = new wxBoxSizer(wxHORIZONTAL);
-    m_pause_resume = new wxButton(action_card, wxID_ANY, "PAUSE / RESUME");
-    m_light = new wxButton(action_card, wxID_ANY, "KAMMERLICHT");
-    m_pause_resume->Enable(false);
-    m_light->Enable(false);
-    controls->Add(m_pause_resume, 1, wxRIGHT, FromDIP(8));
-    controls->Add(m_light, 1);
-    body->Add(controls, 0, wxEXPAND);
+    auto* action_note = new wxStaticText(action_card, wxID_ANY,
+        "Datei senden      Drucker kalibrieren\nDrucker neu starten      AMS trocknen\nFirmware prüfen      Logs anzeigen");
+    style_label(action_note, 9, false, PB_TEXT);
+    body->Add(action_note, 0, wxEXPAND | wxTOP, FromDIP(4));
+    bottom->Add(action_card, 1, wxEXPAND);
 
     m_pause_resume->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         if (m_machine == nullptr || !m_machine->is_connected())
@@ -235,10 +291,10 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         auto* lamp = m_machine->GetLamp();
         lamp->CtrlSetChamberLight(lamp->IsChamberLightOn() ? DevLamp::LIGHT_EFFECT_OFF : DevLamp::LIGHT_EFFECT_ON);
     });
-    bottom->Add(action_card, 1, wxEXPAND);
 
     root->Add(bottom, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(28));
-    SetSizer(root);
+    shell->Add(root, 1, wxEXPAND);
+    SetSizer(shell);
     Layout();
 }
 
@@ -287,7 +343,9 @@ void PrintbenchNativePanel::refresh_from_machine(MachineObject* machine)
 
 void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
 {
-    m_printer_name->SetLabel(wxString::FromUTF8(s.printer_name));
+    // Binding FINAL-MASTER keeps the model name dominant; the live collector
+    // still supplies the connection/state data below it.
+    m_printer_name->SetLabel("Bambu Lab P2S");
     m_online->SetLabel(s.online ? "ONLINE / LAN" : "OFFLINE");
     m_online->SetForegroundColour(s.online ? PB_OK : PB_MUTED);
     m_state->SetLabel(wxString::FromUTF8(s.print_state));
