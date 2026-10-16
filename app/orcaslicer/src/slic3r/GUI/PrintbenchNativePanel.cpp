@@ -204,6 +204,13 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         auto* icon = new wxStaticBitmap(item, wxID_ANY, icon_bitmap);
         auto* label = new wxStaticText(item, wxID_ANY, nav_items[i]);
         style_label(label, 10, i == 0, i == 0 ? *wxWHITE : PB_TEXT);
+        m_nav_rows[i] = item;
+        m_nav_labels[i] = label;
+        const auto nav_handler = [this, i](wxMouseEvent&) { handle_nav(i); };
+        for (wxWindow* hit_target : {static_cast<wxWindow*>(item), static_cast<wxWindow*>(icon), static_cast<wxWindow*>(label)}) {
+            hit_target->SetCursor(wxCursor(wxCURSOR_HAND));
+            hit_target->Bind(wxEVT_LEFT_UP, nav_handler);
+        }
         item_sizer->Add(icon, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(9));
         item_sizer->Add(label, 1, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM | wxALIGN_CENTER_VERTICAL,
                         FromDIP(8));
@@ -228,16 +235,19 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     const std::array<wxString, 6> top_items{L"Drucker", L"Slicer", wxString(L"Ger\u00E4te"), L"Material", L"Historie", L"Einstellungen"};
     for (size_t i = 0; i < top_items.size(); ++i) {
         auto* label = new wxStaticText(this, wxID_ANY, top_items[i]);
-        const bool implemented_nav = i == 0 || i == 1;
-        style_label(label, 11, i == 0, i == 0 ? PB_ACCENT : (implemented_nav ? PB_TEXT : PB_MUTED));
-        if (implemented_nav) {
-            label->SetCursor(wxCursor(wxCURSOR_HAND));
-            label->Bind(wxEVT_LEFT_UP, [i](wxMouseEvent&) {
-                if (!wxGetApp().mainframe)
-                    return;
-                wxGetApp().mainframe->select_tab(i == 0 ? MainFrame::tpMonitor : MainFrame::tp3DEditor);
-            });
-        }
+        style_label(label, 11, i == 0, i == 0 ? PB_ACCENT : PB_TEXT);
+        label->SetCursor(wxCursor(wxCURSOR_HAND));
+        label->Bind(wxEVT_LEFT_UP, [this, i](wxMouseEvent&) {
+            switch (i) {
+            case 0: handle_nav(0); break;                                  // Drucker
+            case 1: if (wxGetApp().mainframe) wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor); break;
+            case 2: if (wxGetApp().mainframe) wxGetApp().mainframe->select_tab(MainFrame::tpMultiDevice); break;
+            case 3: handle_nav(3); break;                                  // Material / AMS
+            case 4: handle_nav(6); break;                                  // Historie
+            case 5: wxGetApp().open_preferences(); break;
+            default: break;
+            }
+        });
         header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
     }
     header->AddStretchSpacer();
@@ -251,6 +261,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     wxBoxSizer* body = nullptr;
 
     auto* printer_card = make_card(this, "BAMBU LAB P2S", body);
+    m_printer_card = printer_card;
     printer_card->SetMinSize(wxSize(FromDIP(390), FromDIP(330)));
     m_printer_name = new wxStaticText(printer_card, wxID_ANY, "Bambu Lab P2S");
     style_label(m_printer_name, 20, true);
@@ -280,6 +291,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* right_hero = new wxBoxSizer(wxVERTICAL);
     auto* camera_card = make_card(this, "LIVE KAMERA", body);
+    m_camera_card = camera_card;
     camera_card->SetMinSize(wxSize(FromDIP(330), FromDIP(205)));
     m_camera = add_value(camera_card, body, "Kamera");
     m_media_ctrl = new wxMediaCtrl2(camera_card);
@@ -292,6 +304,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     right_hero->Add(camera_card, 1, wxEXPAND | wxBOTTOM, FromDIP(8));
 
     auto* quick_card = make_card(this, "SCHNELLSTEUERUNG", body);
+    m_quick_card = quick_card;
     auto* controls = new wxBoxSizer(wxHORIZONTAL);
     m_print = new wxButton(quick_card, wxID_ANY, wxString(L"\u25B6\nDRUCKEN"));
     m_pause_resume = new wxButton(quick_card, wxID_ANY, wxString(L"\u2161\nPAUSE"));
@@ -339,6 +352,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* middle = new wxBoxSizer(wxHORIZONTAL);
     auto* print_card = make_card(this, "AKTUELLER DRUCK", body);
+    m_print_card = print_card;
     auto* job_row = new wxBoxSizer(wxHORIZONTAL);
     auto job_bitmap = create_scaled_bitmap("menu_obj_cube", print_card, 42);
     auto* job_icon = new wxStaticBitmap(print_card, wxID_ANY, job_bitmap);
@@ -394,6 +408,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     middle->Add(temp_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* ams_card = make_card(this, "AMS 2 PRO", body);
+    m_ams_card = ams_card;
     ams_card->SetMinSize(wxSize(FromDIP(300), FromDIP(190)));
     m_ams_environment = add_value(ams_card, body, "Environment");
     auto* slot_grid = new wxFlexGridSizer(1, 4, FromDIP(8), FromDIP(8));
@@ -421,6 +436,7 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     bottom->Add(device_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* history_card = make_card(this, "LETZTE DRUCKE", body);
+    m_history_card = history_card;
     for (size_t i = 0; i < m_history_rows.size(); ++i) {
         m_history_rows[i] = new wxStaticText(history_card, wxID_ANY, i == 0 ? "Noch keine lokalen Druckabschluesse." : "");
         style_label(m_history_rows[i], 9, i == 0, i == 0 ? PB_MUTED : PB_TEXT);
@@ -668,6 +684,50 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
         }
     }
     Layout();
+}
+
+void PrintbenchNativePanel::activate_nav(size_t index)
+{
+    if (index >= m_nav_rows.size())
+        return;
+    for (size_t i = 0; i < m_nav_rows.size(); ++i) {
+        if (!m_nav_rows[i] || !m_nav_labels[i])
+            continue;
+        const bool active = i == index;
+        m_nav_rows[i]->SetBackgroundColour(active ? wxColour(8, 102, 218) : wxColour(4, 14, 24));
+        style_label(m_nav_labels[i], 10, active, active ? *wxWHITE : PB_TEXT);
+        m_nav_rows[i]->Refresh(false);
+    }
+}
+
+void PrintbenchNativePanel::scroll_to(wxWindow* target)
+{
+    if (!target)
+        return;
+    const int step = std::max(1, FromDIP(12));
+    Scroll(-1, std::max(0, target->GetPosition().y / step));
+    target->SetFocus();
+}
+
+void PrintbenchNativePanel::handle_nav(size_t index)
+{
+    activate_nav(index);
+    switch (index) {
+    case 0: Scroll(0, 0); break;                              // Uebersicht
+    case 1: scroll_to(m_camera_card); break;                  // Live Ansicht
+    case 2: scroll_to(m_quick_card); break;                   // Steuerung
+    case 3: scroll_to(m_ams_card); break;                     // AMS 2 Pro
+    case 4: scroll_to(m_ams_card); break;                     // Material
+    case 5: scroll_to(m_print_card); break;                   // Druckauftraege
+    case 6: scroll_to(m_history_card); break;                 // Historie
+    case 7: if (wxGetApp().mainframe) wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor); break;
+    case 8: scroll_to(m_camera_card); break;                  // Kamera
+    case 9: if (wxGetApp().mainframe) wxGetApp().mainframe->select_tab(MainFrame::tpMultiDevice); break;
+    case 10: if (wxGetApp().mainframe) wxGetApp().mainframe->select_tab(MainFrame::tpMultiDevice); break;
+    case 11: wxGetApp().open_preferences(); break;            // Sicherheit / Einstellungen
+    case 12: if (wxGetApp().mainframe) wxGetApp().mainframe->show_log_window(); break;
+    default: break;
+    }
 }
 
 void PrintbenchNativePanel::observe_history(const PrintbenchSnapshot& s)

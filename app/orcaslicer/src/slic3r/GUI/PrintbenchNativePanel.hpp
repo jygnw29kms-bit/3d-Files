@@ -45,6 +45,9 @@ private:
     void update_history_ui();
     void observe_history(const PrintbenchSnapshot& snapshot);
     void append_history(const wxString& job_name, const wxString& status, int observed_seconds);
+    void activate_nav(size_t index);
+    void handle_nav(size_t index);
+    void scroll_to(wxWindow* target);
 
     PrintbenchCollector m_collector;
     MachineObject* m_machine{nullptr};
@@ -76,6 +79,14 @@ private:
     wxStaticText* m_camera{nullptr};
     wxStaticText* m_device_status{nullptr};
     std::array<wxStaticText*, 3> m_history_rows{};
+    std::array<wxPanel*, 13> m_nav_rows{};
+    std::array<wxStaticText*, 13> m_nav_labels{};
+    wxWindow* m_printer_card{nullptr};
+    wxWindow* m_camera_card{nullptr};
+    wxWindow* m_quick_card{nullptr};
+    wxWindow* m_print_card{nullptr};
+    wxWindow* m_ams_card{nullptr};
+    wxWindow* m_history_card{nullptr};
     std::deque<HistoryEntry> m_history;
     bool m_history_tracking{false};
     wxString m_history_job_name;
