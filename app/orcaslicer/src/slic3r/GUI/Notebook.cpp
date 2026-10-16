@@ -39,8 +39,22 @@ ButtonsListCtrl::ButtonsListCtrl(wxWindow *parent, wxBoxSizer* side_tools) :
     m_sizer = new wxBoxSizer(wxHORIZONTAL);
     this->SetSizer(m_sizer);
 
-    m_buttons_sizer = new wxFlexGridSizer(1, m_btn_margin, m_btn_margin);
-    m_sizer->Add(m_buttons_sizer, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxBOTTOM, m_btn_margin);
+    // PRINTBENCH FINAL-MASTER identity for non-Device pages.
+    auto* brand_sizer = new wxBoxSizer(wxVERTICAL);
+    auto* brand_title = new wxStaticText(this, wxID_ANY, "PRINTBENCH");
+    brand_title->SetFont(Label::Head_14);
+    brand_title->SetForegroundColour(wxColour("#F5F8FC"));
+    brand_title->SetBackgroundColour(wxColour("#061018"));
+    auto* brand_subtitle = new wxStaticText(this, wxID_ANY, "Studio • Bambu Integration");
+    brand_subtitle->SetFont(Label::Body_10);
+    brand_subtitle->SetForegroundColour(wxColour("#54B8FF"));
+    brand_subtitle->SetBackgroundColour(wxColour("#061018"));
+    brand_sizer->Add(brand_title, 0, wxBOTTOM, FromDIP(1));
+    brand_sizer->Add(brand_subtitle, 0);
+    m_sizer->Add(brand_sizer, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(18));
+
+    m_buttons_sizer = new wxFlexGridSizer(1, FromDIP(6), FromDIP(6));
+    m_sizer->Add(m_buttons_sizer, 0, wxALIGN_CENTER_VERTICAL);
 
     if (side_tools != NULL) {
         m_sizer->AddStretchSpacer(1);
@@ -105,7 +119,7 @@ void ButtonsListCtrl::Rescale()
     int em = em_unit(this);
     for (Button* btn : m_pageButtons) {
         //BBS
-        btn->SetMinSize({(btn->GetLabel().empty() ? 40 : 132) * em / 10, 36 * em / 10});
+        btn->SetMinSize({(btn->GetLabel().empty() ? 46 : 116) * em / 10, 54 * em / 10});
         btn->Rescale();
     }
 
@@ -126,8 +140,8 @@ void ButtonsListCtrl::SetSelection(int sel)
     wxColour selected_btn_bg("#0A84FF");    // PRINTBENCH FINAL-MASTER
     if (m_selection >= 0) {
         StateColor bg_color = StateColor(
-        std::pair{wxColour(107, 107, 107), (int) StateColor::Hovered},
-        std::pair{wxColour(59, 68, 70), (int) StateColor::Normal});
+        std::pair{wxColour("#0B1D2A"), (int) StateColor::Hovered},
+        std::pair{wxColour("#061018"), (int) StateColor::Normal});
         m_pageButtons[m_selection]->SetBackgroundColor(bg_color);
         StateColor text_color = StateColor(
         std::pair{wxColour(254,254, 254), (int) StateColor::Normal}
@@ -138,8 +152,8 @@ void ButtonsListCtrl::SetSelection(int sel)
     m_selection = sel;
 
     StateColor bg_color = StateColor(
-        std::pair{wxColour(0, 150, 136), (int) StateColor::Hovered},
-        std::pair{wxColour(0,150, 136), (int) StateColor::Normal});
+        std::pair{wxColour("#147CF3"), (int) StateColor::Hovered},
+        std::pair{wxColour("#0A63D8"), (int) StateColor::Normal});
     m_pageButtons[m_selection]->SetBackgroundColor(bg_color);
 
     StateColor text_color = StateColor(
@@ -154,15 +168,15 @@ void ButtonsListCtrl::SetSelection(int sel)
 bool ButtonsListCtrl::InsertPage(size_t n, const wxString &text, bool bSelect /* = false*/, const std::string &bmp_name /* = ""*/, const std::string &inactive_bmp_name)
 {
     Button * btn = new Button(this, text.empty() ? text : " " + text, bmp_name, wxNO_BORDER);
-    btn->SetCornerRadius(FromDIP(10));
+    btn->SetCornerRadius(FromDIP(8));
 
     int em = em_unit(this);
     //BBS set size for button
-    btn->SetMinSize({(text.empty() ? 40 : 136) * em / 10, 36 * em / 10});
+    btn->SetMinSize({(text.empty() ? 46 : 116) * em / 10, 54 * em / 10});
 
     StateColor bg_color = StateColor(
-        std::pair{wxColour(107, 107, 107), (int) StateColor::Hovered},
-        std::pair{wxColour(59, 68, 70), (int) StateColor::Normal});
+        std::pair{wxColour("#0B1D2A"), (int) StateColor::Hovered},
+        std::pair{wxColour("#061018"), (int) StateColor::Normal});
 
     btn->SetBackgroundColor(bg_color);
     StateColor text_color = StateColor(
