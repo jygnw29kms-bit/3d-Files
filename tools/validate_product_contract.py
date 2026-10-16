@@ -51,7 +51,15 @@ native_collector=ORCA/'src'/'slic3r'/'GUI'/'PrintbenchCollector.cpp'
 monitor=(ORCA/'src'/'slic3r'/'GUI'/'Monitor.cpp').read_text(encoding='utf-8',errors='ignore')
 if not native_panel.is_file():errors.append('Native PRINTBENCH panel missing')
 if not native_collector.is_file():errors.append('Native PRINTBENCH collector missing')
-if 'new PrintbenchNativePanel(m_tabpanel)' not in monitor:errors.append('Device -> PRINTBENCH is not using the native panel')
+# The FINAL-MASTER gives PRINTBENCH the complete Device viewport. The native
+# panel therefore belongs directly to MonitorPanel; Orca's legacy Tabbook is
+# kept hidden only for internal services.
+if 'm_printbench_panel = new PrintbenchNativePanel(this);' not in monitor:
+    errors.append('Device -> PRINTBENCH is not using the full native Device viewport')
+if 'm_tabpanel->Hide();' not in monitor:
+    errors.append('Legacy Orca Device tabbook is still exposed')
+if 'm_main_sizer->Add(m_printbench_panel, 1, wxEXPAND, 0);' not in monitor:
+    errors.append('Native PRINTBENCH panel does not own the Device viewport')
 if 'm_printbench_panel->load_url' in monitor:errors.append('PRINTBENCH Device surface still embeds a WebView URL')
 
 if errors:
