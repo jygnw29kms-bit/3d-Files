@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-15T10:01:59+00:00",
+  "updated": "2026-10-16T09:55:18+00:00",
   "sources": [
     {
       "name": "3D Filament Profiles",
@@ -69,7 +69,7 @@
       "materials": {
         "PLA": 16.99,
         "PLA+": 18.99,
-        "PETG": 18.99,
+        "PETG": 8.54,
         "ABS": 19.99,
         "ASA": 24.99,
         "TPU": 25.99
@@ -101,10 +101,10 @@
       "materials": {
         "PLA": 6.0,
         "PLA+": 12.99,
-        "PETG": 12.99,
+        "PETG": 6.38,
         "ABS": 15.99,
         "ASA": 18.99,
-        "TPU": 16.59
+        "TPU": 15.99
       }
     },
     {
@@ -162,12 +162,12 @@
     {
       "name": "Creality",
       "materials": {
-        "PLA": 13.99,
+        "PLA": 7.19,
         "PLA+": 14.99,
-        "PETG": 14.99,
+        "PETG": 5.79,
         "ABS": 16.99,
         "ASA": 19.99,
-        "TPU": 21.99
+        "TPU": 21.8
       }
     },
     {
@@ -209,6 +209,13 @@
       "url": "https://spulenheld.de/deals/pla"
     },
     {
+      "brand": "Creality",
+      "material": "PLA",
+      "eur_per_kg": 7.19,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/pla"
+    },
+    {
       "brand": "Bambu Lab",
       "material": "PLA",
       "eur_per_kg": 7.29,
@@ -223,9 +230,30 @@
       "url": "https://spulenheld.de/deals/petg"
     },
     {
+      "brand": "Creality",
+      "material": "PETG",
+      "eur_per_kg": 5.79,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/petg"
+    },
+    {
+      "brand": "Elegoo",
+      "material": "PETG",
+      "eur_per_kg": 6.38,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/petg"
+    },
+    {
       "brand": "GEEETECH",
       "material": "PETG",
       "eur_per_kg": 7.25,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/petg"
+    },
+    {
+      "brand": "eSUN",
+      "material": "PETG",
+      "eur_per_kg": 8.54,
       "source": "Spulenheld",
       "url": "https://spulenheld.de/deals/petg"
     },
@@ -251,9 +279,23 @@
       "url": "https://spulenheld.de/deals/abs"
     },
     {
+      "brand": "KINGROON",
+      "material": "ABS",
+      "eur_per_kg": 12.59,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/abs"
+    },
+    {
       "brand": "JAYO",
       "material": "ABS",
       "eur_per_kg": 14.89,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/abs"
+    },
+    {
+      "brand": "Polymaker",
+      "material": "ABS",
+      "eur_per_kg": 25.0,
       "source": "Spulenheld",
       "url": "https://spulenheld.de/deals/abs"
     },
@@ -281,7 +323,14 @@
     {
       "brand": "Elegoo",
       "material": "TPU",
-      "eur_per_kg": 16.59,
+      "eur_per_kg": 15.99,
+      "source": "Spulenheld",
+      "url": "https://spulenheld.de/deals/tpu"
+    },
+    {
+      "brand": "Creality",
+      "material": "TPU",
+      "eur_per_kg": 21.8,
       "source": "Spulenheld",
       "url": "https://spulenheld.de/deals/tpu"
     }
