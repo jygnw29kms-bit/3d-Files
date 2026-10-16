@@ -289,14 +289,40 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* middle = new wxBoxSizer(wxHORIZONTAL);
     auto* print_card = make_card(this, "AKTUELLER DRUCK", body);
-    m_job_name = add_value(print_card, body, "Datei");
+    auto* job_row = new wxBoxSizer(wxHORIZONTAL);
+    auto job_bitmap = create_scaled_bitmap("menu_obj_cube", print_card, 42);
+    auto* job_icon = new wxStaticBitmap(print_card, wxID_ANY, job_bitmap);
+    auto* job_text = new wxBoxSizer(wxVERTICAL);
+    m_job_name = new wxStaticText(print_card, wxID_ANY, "Kein aktiver Druck");
+    style_label(m_job_name, 13, true, PB_TEXT);
+    auto* job_meta = new wxStaticText(print_card, wxID_ANY, "Bambu Lab P2S  •  lokaler Druckauftrag");
+    style_label(job_meta, 9, false, PB_MUTED);
+    job_text->Add(m_job_name, 0, wxBOTTOM, FromDIP(3));
+    job_text->Add(job_meta, 0);
+    job_row->Add(job_icon, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, FromDIP(10));
+    job_row->Add(job_text, 1, wxALIGN_CENTER_VERTICAL);
+    body->Add(job_row, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
+
     m_progress_gauge = new wxGauge(print_card, wxID_ANY, 100, wxDefaultPosition, wxSize(-1, FromDIP(10)), wxGA_HORIZONTAL);
     m_progress_gauge->SetForegroundColour(PB_ACCENT);
     m_progress_gauge->SetBackgroundColour(PB_BORDER);
     body->Add(m_progress_gauge, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
-    m_progress = add_value(print_card, body, "Fortschritt");
-    m_layers = add_value(print_card, body, "Schichten");
-    m_remaining = add_value(print_card, body, "Restzeit");
+
+    auto* print_metrics = new wxBoxSizer(wxHORIZONTAL);
+    auto add_metric = [&](const wxString& caption, wxStaticText*& value) {
+        auto* col = new wxBoxSizer(wxVERTICAL);
+        auto* name = new wxStaticText(print_card, wxID_ANY, caption);
+        style_label(name, 8, true, PB_MUTED);
+        value = new wxStaticText(print_card, wxID_ANY, "--");
+        style_label(value, 12, true, PB_TEXT);
+        col->Add(name, 0, wxBOTTOM, FromDIP(2));
+        col->Add(value, 0);
+        print_metrics->Add(col, 1, wxRIGHT, FromDIP(8));
+    };
+    add_metric("FORTSCHRITT", m_progress);
+    add_metric("SCHICHTEN", m_layers);
+    add_metric("RESTZEIT", m_remaining);
+    body->Add(print_metrics, 0, wxEXPAND);
     middle->Add(print_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* temp_card = make_card(this, "TEMPERATUREN (LIVE)", body);
@@ -495,13 +521,21 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
     const bool active_print = s.print_state == "RUNNING" || s.print_state == "PAUSE";
     if (m_job_name)
         m_job_name->SetLabel(active_print ? (s.job_name.empty() ? "Aktiver Druck" : wxString::FromUTF8(s.job_name)) : "Kein aktiver Druck");
+    const int progress_value = active_print ? std::clamp(s.progress, 0, 100) : 0;
+    if (m_progress_gauge)
+        m_progress_gauge->SetValue(progress_value);
     if (active_print) {
-        m_progress->SetLabel(wxString::Format("%d %%", std::clamp(s.progress, 0, 100)));
+        m_progress->SetLabel(wxString::Format("%d %%", progress_value));
+        m_progress->SetForegroundColour(PB_OK);
         m_layers->SetLabel(wxString::Format("%d / %d", s.layer_current, s.layer_total));
         const int minutes = std::max(0, s.remaining_seconds / 60);
-        m_remaining->SetLabel(wxString::Format("%d min", minutes));
+        if (minutes >= 60)
+            m_remaining->SetLabel(wxString::Format("%d h %02d min", minutes / 60, minutes % 60));
+        else
+            m_remaining->SetLabel(wxString::Format("%d min", minutes));
     } else {
         m_progress->SetLabel("--");
+        m_progress->SetForegroundColour(PB_TEXT);
         m_layers->SetLabel("--");
         m_remaining->SetLabel("--");
     }
