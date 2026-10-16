@@ -31,6 +31,7 @@ struct PrintbenchSnapshot
     int         bed_target_c{0};
     float       chamber_c{0.0f};
     std::string wifi_signal;
+    int         speed_level{0};
     bool        has_camera{false};
     bool        camera_recording{false};
     bool        camera_timelapse{false};

@@ -33,8 +33,11 @@ private:
     wxMediaCtrl2* m_media_ctrl{nullptr};
     MediaPlayCtrl* m_media_play_ctrl{nullptr};
     PrintbenchTempChart* m_temp_chart{nullptr};
+    wxButton* m_print{nullptr};
     wxButton* m_pause_resume{nullptr};
+    wxButton* m_stop{nullptr};
     wxButton* m_light{nullptr};
+    std::array<wxButton*, 4> m_speed_buttons{};
     wxStaticText* m_printer_name{nullptr};
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
@@ -44,6 +47,9 @@ private:
     wxStaticText* m_nozzle{nullptr};
     wxStaticText* m_bed{nullptr};
     wxStaticText* m_chamber{nullptr};
+    wxStaticText* m_status_ready{nullptr};
+    wxStaticText* m_speed{nullptr};
+    wxStaticText* m_ams_summary{nullptr};
     wxStaticText* m_wifi{nullptr};
     wxStaticText* m_camera{nullptr};
     wxStaticText* m_ams_environment{nullptr};

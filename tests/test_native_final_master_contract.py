@@ -6,6 +6,7 @@ MONITOR = (GUI / 'Monitor.cpp').read_text(encoding='utf-8')
 PANEL_CPP = (GUI / 'PrintbenchNativePanel.cpp').read_text(encoding='utf-8')
 PANEL_HPP = (GUI / 'PrintbenchNativePanel.hpp').read_text(encoding='utf-8')
 PANEL = PANEL_CPP + '\n' + PANEL_HPP
+PANEL_RENDERED = PANEL.replace('\\u00DC', '\u00DC').replace('\\u00E4', '\u00E4').replace('\\u00FC', '\u00FC').replace('\\u2022', '\u2022').replace('\\u25CF', '\u25CF').replace('\\u2699', '\u2699')
 SPEC = (ROOT / 'docs' / 'design' / 'PRINTBENCH_FINAL_MASTER.md').read_text(encoding='utf-8')
 
 
@@ -36,10 +37,10 @@ def test_native_panel_covers_final_master_primary_regions():
     for label in required_labels:
         assert label in PANEL, label
 
-    for label in ['Übersicht', 'Live Ansicht', 'Steuerung', 'Druckaufträge', 'Geräte-Setup',
-                  'Netzwerk', 'Sicherheit', 'Diagnose', 'Drucker', 'Slicer', 'Geräte',
+    for label in ['\u00dcbersicht', 'Live Ansicht', 'Steuerung', 'Druckauftr\u00e4ge', 'Ger\u00e4te-Setup',
+                  'Netzwerk', 'Sicherheit', 'Diagnose', 'Drucker', 'Slicer', 'Ger\u00e4te',
                   'Material', 'Historie', 'Einstellungen', 'SCHNELLSTEUERUNG']:
-        assert label in PANEL, label
+        assert label in PANEL_RENDERED, label
 
 
 def test_native_panel_uses_live_machine_state_and_native_media():
@@ -61,7 +62,7 @@ def test_native_panel_uses_live_machine_state_and_native_media():
 def test_final_master_spec_forbids_desktop_bridge_regression():
     assert 'FINAL ist FINAL' in SPEC
     assert 'natives wxWidgets-Panel' in SPEC
-    assert 'keine WebView als finale PRINTBENCH-Desktopoberfläche' in SPEC
+    assert 'keine WebView als finale PRINTBENCH-Desktopoberfl\xe4che' in SPEC
     assert 'kein Raspberry Pi als Pflicht' in SPEC
     assert 'kein Bambu Studio erforderlich' in SPEC
     assert 'direkt vom PC im LAN' in SPEC

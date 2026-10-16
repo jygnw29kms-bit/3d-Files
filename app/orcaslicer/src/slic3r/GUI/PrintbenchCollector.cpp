@@ -24,6 +24,7 @@ PrintbenchSnapshot PrintbenchCollector::collect(MachineObject* machine) const
     out.layer_total = machine->total_layers;
     out.chamber_c = machine->chamber_temp;
     out.wifi_signal = machine->wifi_signal;
+    out.speed_level = static_cast<int>(machine->GetPrintingSpeedLevel());
 
     if (auto* ext = machine->GetExtderSystem()) {
         const int ext_id = ext->GetCurrentExtderId();
