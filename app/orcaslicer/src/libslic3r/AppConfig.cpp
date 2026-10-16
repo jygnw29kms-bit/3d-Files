@@ -327,8 +327,8 @@ void AppConfig::set_defaults()
 //#endif
 
 #ifdef SUPPORT_DARK_MODE
-    if (get("dark_color_mode").empty())
-        set("dark_color_mode", "0");
+    // 135er-PRINTBENCH FINAL-MASTER is a dark product shell.
+    set("dark_color_mode", "1");
 #endif
 
 //#ifdef SUPPORT_SYS_MENU

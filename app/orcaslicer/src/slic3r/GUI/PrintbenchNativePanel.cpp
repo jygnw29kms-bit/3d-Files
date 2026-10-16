@@ -1,6 +1,8 @@
 #include "PrintbenchNativePanel.hpp"
 
 #include "DeviceManager.hpp"
+#include "GUI_App.hpp"
+#include "MainFrame.hpp"
 #include "DeviceCore/DevLamp.h"
 #include "MediaPlayCtrl.h"
 #include "wxMediaCtrl2.h"
@@ -153,7 +155,16 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     const std::array<wxString, 6> top_items{"Drucker", "Slicer", "Geräte", "Material", "Historie", "Einstellungen"};
     for (size_t i = 0; i < top_items.size(); ++i) {
         auto* label = new wxStaticText(this, wxID_ANY, top_items[i]);
-        style_label(label, 10, i == 0, i == 0 ? PB_ACCENT : PB_TEXT);
+        const bool implemented_nav = i == 0 || i == 1;
+        style_label(label, 10, i == 0, i == 0 ? PB_ACCENT : (implemented_nav ? PB_TEXT : PB_MUTED));
+        if (implemented_nav) {
+            label->SetCursor(wxCursor(wxCURSOR_HAND));
+            label->Bind(wxEVT_LEFT_UP, [i](wxMouseEvent&) {
+                if (!wxGetApp().mainframe)
+                    return;
+                wxGetApp().mainframe->select_tab(i == 0 ? MainFrame::tpMonitor : MainFrame::tp3DEditor);
+            });
+        }
         header->Add(label, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
     }
     header->AddStretchSpacer();

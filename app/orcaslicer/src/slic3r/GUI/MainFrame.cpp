@@ -350,7 +350,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     m_topbar         = new BBLTopbar(this);
 #else
     auto panel_topbar = new wxPanel(this, wxID_ANY);
-    panel_topbar->SetBackgroundColour(wxColour(38, 46, 48));
+    panel_topbar->SetBackgroundColour(wxColour(6, 16, 24));
     auto sizer_tobar = new wxBoxSizer(wxVERTICAL);
     panel_topbar->SetSizer(sizer_tobar);
     panel_topbar->Layout();
@@ -524,7 +524,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     m_main_sizer = new wxBoxSizer(wxVERTICAL);
     wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 #ifndef __APPLE__
+     // PRINTBENCH FINAL-MASTER replaces the Orca file/undo topbar with its own product shell.
      sizer->Add(m_topbar, 0, wxEXPAND);
+     m_topbar->Hide();
 #else
      sizer->Add(panel_topbar, 0, wxEXPAND);
 #endif // __WINDOWS__
@@ -1015,8 +1017,8 @@ void MainFrame::update_layout()
     case ESettingsLayout::Old:
     {
         m_plater->Reparent(m_tabpanel);
-        m_tabpanel->InsertPage(tp3DEditor, m_plater, _L("Prepare"), std::string("tab_3d_active"), std::string("tab_3d_active"), false);
-        m_tabpanel->InsertPage(tpPreview, m_plater, _L("Preview"), std::string("tab_preview_active"), std::string("tab_preview_active"), false);
+        m_tabpanel->InsertPage(tp3DEditor, m_plater, _L("Slicer"), std::string("tab_3d_active"), std::string("tab_3d_active"), false);
+        m_tabpanel->InsertPage(tpPreview, m_plater, _L("Vorschau"), std::string("tab_preview_active"), std::string("tab_preview_active"), false);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND | wxTOP, 0);
 
         m_tabpanel->Bind(wxCUSTOMEVT_NOTEBOOK_SEL_CHANGED, [this](wxCommandEvent& evt)
@@ -1236,7 +1238,7 @@ void MainFrame::init_tabpanel() {
     wxBoxSizer *side_tools = create_side_tools();
     m_tabpanel = new Notebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, side_tools,
                               wxNB_TOP | wxTAB_TRAVERSAL | wxNB_NOPAGETHEME);
-    m_tabpanel->SetBackgroundColour(*wxWHITE);
+    m_tabpanel->SetBackgroundColour(wxColour("#061018"));
 
 #ifndef __WXOSX__ // Don't call SetFont under OSX to avoid name cutting in ObjectList
     m_tabpanel->SetFont(Slic3r::GUI::wxGetApp().normal_font());
@@ -1252,6 +1254,12 @@ void MainFrame::init_tabpanel() {
         //BBS
         wxWindow* panel = m_tabpanel->GetCurrentPage();
         int sel = m_tabpanel->GetSelection();
+        // PRINTBENCH FINAL-MASTER: the native Device shell owns its own top navigation.
+        // Keep the legacy page strip only while working inside the slicer until that shell is replaced too.
+        if (auto* page_buttons = m_tabpanel->GetBtnsListCtrl()) {
+            page_buttons->Show(sel != tpMonitor);
+            m_tabpanel->Layout();
+        }
         //wxString page_text = m_tabpanel->GetPageText(sel);
         m_last_selected_tab = m_tabpanel->GetSelection();
         if (panel == m_plater) {
@@ -1312,11 +1320,13 @@ void MainFrame::init_tabpanel() {
             m_webview->load_url(url);
         });
         m_tabpanel->AddPage(m_webview, "", "tab_home_active", "tab_home_active", false);
+        // PRINTBENCH: keep the legacy homepage only for internal compatibility; do not expose OrcaCloud UI.
+        m_tabpanel->GetBtnsListCtrl()->ShowPageButton(tpHome, false);
         m_param_panel = new ParamsPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL);
     }
 
     m_plater = new Plater(this, this);
-    m_plater->SetBackgroundColour(*wxWHITE);
+    m_plater->SetBackgroundColour(wxColour("#061018"));
     m_plater->Hide();
 
     wxGetApp().plater_ = m_plater;
@@ -1325,8 +1335,8 @@ void MainFrame::init_tabpanel() {
 
         //BBS add pages
     m_monitor = new MonitorPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    m_monitor->SetBackgroundColour(*wxWHITE);
-    m_tabpanel->AddPage(m_monitor, _L("Device"), std::string("tab_monitor_active"), std::string("tab_monitor_active"), false);
+    m_monitor->SetBackgroundColour(wxColour("#061018"));
+    m_tabpanel->AddPage(m_monitor, _L("Drucker"), std::string("tab_monitor_active"), std::string("tab_monitor_active"), false);
 
     m_printer_view = new PrinterWebView(m_tabpanel);
     Bind(EVT_LOAD_PRINTER_URL, [this](LoadPrinterViewEvent &evt) {
@@ -1339,18 +1349,18 @@ void MainFrame::init_tabpanel() {
 
     if (wxGetApp().is_enable_multi_machine()) {
         m_multi_machine = new MultiMachinePage(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-        m_multi_machine->SetBackgroundColour(*wxWHITE);
+        m_multi_machine->SetBackgroundColour(wxColour("#061018"));
         // TODO: change the bitmap
         m_tabpanel->AddPage(m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"), std::string("tab_multi_active"), false);
     }
 
     m_project = new ProjectPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    m_project->SetBackgroundColour(*wxWHITE);
-    m_tabpanel->AddPage(m_project, _L("Project"), std::string("tab_auxiliary_active"), std::string("tab_auxiliary_active"), false);
+    m_project->SetBackgroundColour(wxColour("#061018"));
+    m_tabpanel->AddPage(m_project, _L("Dateien"), std::string("tab_auxiliary_active"), std::string("tab_auxiliary_active"), false);
 
     m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    m_calibration->SetBackgroundColour(*wxWHITE);
-    m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
+    m_calibration->SetBackgroundColour(wxColour("#061018"));
+    m_tabpanel->AddPage(m_calibration, _L("Kalibrierung"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
 
     if (m_plater) {
         // load initial config
@@ -1387,15 +1397,15 @@ void MainFrame::show_device(bool bBBLPrinter) {
         // Create/insert monitor page
         if (!m_monitor) {
             m_monitor = new MonitorPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-            m_monitor->SetBackgroundColour(*wxWHITE);
+            m_monitor->SetBackgroundColour(wxColour("#061018"));
         }
         m_monitor->Show(false);
-        m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Device"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));
+        m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Drucker"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));
 
         if (wxGetApp().is_enable_multi_machine()) {
             if (!m_multi_machine) {
                 m_multi_machine = new MultiMachinePage(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-                m_multi_machine->SetBackgroundColour(*wxWHITE);
+                m_multi_machine->SetBackgroundColour(wxColour("#061018"));
             }
             // TODO: change the bitmap
             m_multi_machine->Show(false);
@@ -1404,12 +1414,12 @@ void MainFrame::show_device(bool bBBLPrinter) {
         }
         if (!m_calibration) {
             m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-            m_calibration->SetBackgroundColour(*wxWHITE);
+            m_calibration->SetBackgroundColour(wxColour("#061018"));
         }
         m_calibration->Show(false);
         // Calibration is always the last page, so don't use InsertPage here. Otherwise, if multi_machine page is not enabled,
         // the calibration tab won't be properly added as well, due to the TabPosition::tpCalibration no longer matches the real tab position.
-        m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"),
+        m_tabpanel->AddPage(m_calibration, _L("Kalibrierung"), std::string("tab_calibration_active"),
                                std::string("tab_calibration_active"), false);
 
 #ifdef _MSW_DARK_MODE
@@ -1443,7 +1453,7 @@ void MainFrame::show_device(bool bBBLPrinter) {
             });
         }
         m_printer_view->Show(false);
-        m_tabpanel->InsertPage(tpMonitor, m_printer_view, _L("Device"), std::string("tab_monitor_active"),
+        m_tabpanel->InsertPage(tpMonitor, m_printer_view, _L("Drucker"), std::string("tab_monitor_active"),
                                std::string("tab_monitor_active"));
     }
     fit_tab_labels(); // ORCA on printer change
@@ -3531,7 +3541,7 @@ void MainFrame::init_menubar_as_editor()
         [this](wxCommandEvent&) { wxLaunchDefaultBrowser("https://www.orcaslicer.com/wiki/calibration_guide", wxBROWSER_NEW_WINDOW); }, "", nullptr,
         [this]() {return m_plater->is_view3D_shown();; }, this);
 
-    m_menubar->Append(calib_menu,wxString::Format("&%s", _L("Calibration")));
+    m_menubar->Append(calib_menu,wxString::Format("&%s", _L("Kalibrierung")));
     if (helpMenu)
         m_menubar->Append(helpMenu, wxString::Format("&%s", _L("Help")));
     SetMenuBar(m_menubar);

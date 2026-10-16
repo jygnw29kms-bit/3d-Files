@@ -845,10 +845,10 @@ void GUI_App::post_init()
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished rendering a first frame for test";
             }
         }
+        // PRINTBENCH FINAL-MASTER: normal desktop startup opens the native printer dashboard.
+        // Explicit files/G-code still enter the Slicer earlier through switch_to_3d.
         if (is_editor())
-            mainframe->select_tab(size_t(0));
-        if (app_config->get("default_page") == "1")
-            mainframe->select_tab(size_t(1));
+            mainframe->select_tab(size_t(MainFrame::tpMonitor));
 #ifndef __linux__
         mainframe->Thaw();
 #endif

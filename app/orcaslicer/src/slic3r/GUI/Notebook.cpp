@@ -25,7 +25,7 @@ ButtonsListCtrl::ButtonsListCtrl(wxWindow *parent, wxBoxSizer* side_tools) :
 #ifdef __APPLE__
     default_btn_bg = wxColour("#3B4446"); // Gradient #414B4E
 #else
-    default_btn_bg = wxColour("#2D2D30"); // Gradient #414B4E
+    default_btn_bg = wxColour("#061018"); // PRINTBENCH FINAL-MASTER
 #endif
 
    
@@ -123,7 +123,7 @@ void ButtonsListCtrl::SetSelection(int sel)
     if (m_selection == sel)
         return;
     // BBS: change button color
-    wxColour selected_btn_bg("#009688");    // Gradient #009688
+    wxColour selected_btn_bg("#0A84FF");    // PRINTBENCH FINAL-MASTER
     if (m_selection >= 0) {
         StateColor bg_color = StateColor(
         std::pair{wxColour(107, 107, 107), (int) StateColor::Hovered},
@@ -154,7 +154,7 @@ void ButtonsListCtrl::SetSelection(int sel)
 bool ButtonsListCtrl::InsertPage(size_t n, const wxString &text, bool bSelect /* = false*/, const std::string &bmp_name /* = ""*/, const std::string &inactive_bmp_name)
 {
     Button * btn = new Button(this, text.empty() ? text : " " + text, bmp_name, wxNO_BORDER);
-    btn->SetCornerRadius(0);
+    btn->SetCornerRadius(FromDIP(10));
 
     int em = em_unit(this);
     //BBS set size for button
@@ -232,6 +232,15 @@ void ButtonsListCtrl::SetCompact(size_t n, bool compact)
     Button* btn = m_pageButtons[n];
     btn->SetMinSize({(compact ? 40 : 136) * em / 10, 36 * em / 10});
     btn->SetLabel(compact ? "" : (" " +  m_pageLabels[n]));
+}
+
+void ButtonsListCtrl::ShowPageButton(size_t n, bool show)
+{
+    if (n >= m_pageButtons.size())
+        return;
+    m_pageButtons[n]->Show(show);
+    m_buttons_sizer->Layout();
+    m_sizer->Layout();
 }
 
 wxString ButtonsListCtrl::GetPageText(size_t n) const
