@@ -1624,7 +1624,7 @@ Sidebar::Sidebar(Plater *parent)
     // As a result we can see the empty block at the bottom of the sidebar
     // But if we set this value to 5, layout will be better
     //p->scrolled->SetScrollRate(0, 5);
-    p->scrolled->SetBackgroundColour(*wxWHITE);
+    p->scrolled->SetBackgroundColour(wxColour("#061018"));
 
 
     SetFont(wxGetApp().normal_font());
@@ -1636,6 +1636,9 @@ Sidebar::Sidebar(Plater *parent)
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 #endif
 #endif
+    // PRINTBENCH FINAL-MASTER shell colors override legacy Orca system palette.
+    SetBackgroundColour(wxColour("#061018"));
+    p->scrolled->SetBackgroundColour(wxColour("#061018"));
 
     int em = wxGetApp().em_unit();
     //BBS refine layout and styles
@@ -1643,10 +1646,10 @@ Sidebar::Sidebar(Plater *parent)
     auto* scrolled_sizer = m_scrolled_sizer = new wxBoxSizer(wxVERTICAL);
     p->scrolled->SetSizer(scrolled_sizer);
 
-    wxColour title_bg = wxColour(248, 248, 248);
-    wxColour inactive_text = wxColour(86, 86, 86);
-    wxColour active_text = wxColour(0, 0, 0);
-    wxColour static_line_col = wxColour(166, 169, 170);
+    wxColour title_bg = wxColour("#0B2639");
+    wxColour inactive_text = wxColour("#7E94A8");
+    wxColour active_text = wxColour("#F4F7FB");
+    wxColour static_line_col = wxColour("#1B405B");
 
 #ifdef __WINDOWS__
     p->scrolled->SetDoubleBuffered(true);
@@ -1658,7 +1661,7 @@ Sidebar::Sidebar(Plater *parent)
         // 1.1 create title bar resources
         p->m_panel_printer_title = new StaticBox(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxBORDER_NONE);
         p->m_panel_printer_title->SetBackgroundColor(title_bg);
-        p->m_panel_printer_title->SetBackgroundColor2(0xF1F1F1);
+        p->m_panel_printer_title->SetBackgroundColor2(wxColour("#081A28"));
 
         p->m_printer_icon = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "printer");
         p->m_text_printer_settings = new Label(p->m_panel_printer_title, _L("Printer"), LB_PROPAGATE_MOUSE_EVENT | wxST_ELLIPSIZE_END);
@@ -1675,7 +1678,7 @@ Sidebar::Sidebar(Plater *parent)
             PhysicalPrinterDialog dlg(this->GetParent());
             dlg.ShowModal();
         });
-        // PRINTBENCH uses the dedicated P2S/Pi bridge; generic print-host setup is not exposed.
+        // PRINTBENCH uses the native local P2S DeviceManager path; generic print-host setup is not exposed.
         p->m_printer_connect->Hide();
 
         // ORCA use sync button on titlebar
@@ -1728,21 +1731,21 @@ Sidebar::Sidebar(Plater *parent)
 
         // add spliter 2
         auto spliter_2 = new ::StaticLine(p->scrolled);
-        spliter_2->SetLineColour("#CECECE");
+        spliter_2->SetLineColour("#1B405B");
         scrolled_sizer->Add(spliter_2, 0, wxEXPAND);
 
 
         /*************************** 2. add printer content ************************/
 
         p->m_panel_printer_content = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-        p->m_panel_printer_content->SetBackgroundColour(wxColour(255, 255, 255));
+        p->m_panel_printer_content->SetBackgroundColour(wxColour("#061018"));
 
         struct PanelColors {
-            wxColour bg_normal = "#FFFFFF";
-            wxColour bg_focus  = "#E5F0EE";
-            wxColour bd_normal = "#DBDBDB";
-            wxColour bd_hover  = "#009688";
-            wxColour bd_focus  = "#009688";
+            wxColour bg_normal = "#0B2639";
+            wxColour bg_focus  = "#0E3652";
+            wxColour bd_normal = "#184463";
+            wxColour bd_hover  = "#147CF3";
+            wxColour bd_focus  = "#0A63D8";
         };
         PanelColors panel_color;
 
@@ -2069,7 +2072,7 @@ Sidebar::Sidebar(Plater *parent)
     // add filament title
     p->m_panel_filament_title = new StaticBox(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxBORDER_NONE);
     p->m_panel_filament_title->SetBackgroundColor(title_bg);
-    p->m_panel_filament_title->SetBackgroundColor2(0xF1F1F1);
+    p->m_panel_filament_title->SetBackgroundColor2(wxColour("#081A28"));
     p->m_panel_filament_title->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &e) {
         if (e.GetPosition().x > (p->m_flushing_volume_btn->IsShown()
                 ? p->m_flushing_volume_btn->GetPosition().x : (p->m_bpButton_add_filament->GetPosition().x - FromDIP(30)))) // ORCA exclude area of del button from titlebar collapse/expand feature to fix undesired collapse when user spams del filament button 
@@ -2095,11 +2098,11 @@ Sidebar::Sidebar(Plater *parent)
     p->m_panel_filament_title->SetSizer( bSizer39 );
     p->m_panel_filament_title->Layout();
     auto spliter_1 = new ::StaticLine(p->scrolled);
-    spliter_1->SetLineColour("#A6A9AA");
+    spliter_1->SetLineColour("#1B405B");
     scrolled_sizer->Add(spliter_1, 0, wxEXPAND);
     scrolled_sizer->Add(p->m_panel_filament_title, 0, wxEXPAND | wxALL, 0);
     auto spliter_2 = new ::StaticLine(p->scrolled);
-    spliter_2->SetLineColour("#CECECE");
+    spliter_2->SetLineColour("#1B405B");
     scrolled_sizer->Add(spliter_2, 0, wxEXPAND);
 
     bSizer39->AddStretchSpacer(1);
@@ -2176,7 +2179,7 @@ Sidebar::Sidebar(Plater *parent)
     p->m_panel_filament_content->SetScrollbars(0, 100, 1, 2);
     p->m_panel_filament_content->SetScrollRate(0, 5);
     //p->m_panel_filament_content->SetMaxSize(wxSize{-1, FromDIP(174)});
-    p->m_panel_filament_content->SetBackgroundColour(wxColour(255, 255, 255));
+    p->m_panel_filament_content->SetBackgroundColour(wxColour("#061018"));
 
     //wxBoxSizer* bSizer_filament_content;
     //bSizer_filament_content = new wxBoxSizer( wxHORIZONTAL );
@@ -2209,11 +2212,11 @@ Sidebar::Sidebar(Plater *parent)
     if (params_panel) {
         params_panel->get_top_panel()->Reparent(p->scrolled);
         auto spliter_1 = new ::StaticLine(p->scrolled);
-        spliter_1->SetLineColour("#A6A9AA");
+        spliter_1->SetLineColour("#1B405B");
         scrolled_sizer->Add(spliter_1, 0, wxEXPAND);
         scrolled_sizer->Add(params_panel->get_top_panel(), 0, wxEXPAND);
         auto spliter_2 = new ::StaticLine(p->scrolled);
-        spliter_2->SetLineColour("#CECECE");
+        spliter_2->SetLineColour("#1B405B");
         scrolled_sizer->Add(spliter_2, 0, wxEXPAND);
     }
 
@@ -2223,14 +2226,14 @@ Sidebar::Sidebar(Plater *parent)
     // ORCA: Update search box to modern style
     p->m_search_bar = new StaticBox(p->scrolled);
     p->m_search_bar->SetCornerRadius(0);
-    p->m_search_bar->SetBorderColor(wxColour("#CECECE"));
+    p->m_search_bar->SetBorderColor(wxColour("#184463"));
 
     p->m_search_item = new TextInput(p->m_search_bar, wxEmptyString, wxEmptyString, "", wxDefaultPosition, wxDefaultSize, 0 | wxBORDER_NONE);
     p->m_search_item->SetIcon(*BitmapCache().load_svg("search", FromDIP(16), FromDIP(16))); // ORCA: Add search icon to search box
 
     wxTextCtrl* text_ctrl = p->m_search_item->GetTextCtrl();
     text_ctrl->SetHint(_L("Search plate, object and part."));
-    text_ctrl->SetForegroundColour(wxColour("#262E30"));
+    text_ctrl->SetForegroundColour(wxColour("#F4F7FB"));
     text_ctrl->SetFont(Label::Body_13);
     text_ctrl->SetSize(wxSize(-1, FromDIP(16))); // Centers text vertically
 
@@ -2239,7 +2242,7 @@ Sidebar::Sidebar(Plater *parent)
             e.Skip();
             return;
         }
-        p->m_search_bar->SetBorderColor(wxColour("#009688"));
+        p->m_search_bar->SetBorderColor(wxColour("#147CF3"));
         wxPoint pos = this->p->m_search_bar->ClientToScreen(wxPoint(0, 0));
 #ifndef __WXGTK__
         pos.y += this->p->m_search_bar->GetRect().height;
@@ -2263,7 +2266,7 @@ Sidebar::Sidebar(Plater *parent)
 #ifdef __WXGTK__
         this->p->m_search_item->Enable(true);
 #endif
-        this->p->m_search_bar->SetBorderColor(wxColour("#CECECE"));
+        this->p->m_search_bar->SetBorderColor(wxColour("#184463"));
         this->p->m_search_item->GetTextCtrl()->SetValue(""); // reset value when close
     });
 

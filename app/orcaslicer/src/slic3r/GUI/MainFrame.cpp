@@ -135,7 +135,7 @@ private:
     void OnPaint(wxPaintEvent&)
     {
         wxPaintDC dc(this);
-        // Transparent — draw nothing
+        // Transparent \u2014 draw nothing
     }
 
     GdkWindowEdge get_gdk_edge(const wxPoint& pos) const
@@ -283,7 +283,7 @@ wxDEFINE_EVENT(EVT_SYNC_CLOUD_PRESET,     SimpleEvent);
 #ifdef __APPLE__
 static const wxString ctrl = ("Ctrl+");
 // FIXME: maybe should be using GUI::shortkey_ctrl_prefix() or equivalent?
-static const std::string ctrl_t = u8"\u2318+"; // "⌘" (Mac Command)
+static const std::string ctrl_t = u8"\u2318+"; // "\u2318" (Mac Command)
 #else
 static const wxString ctrl = _L("Ctrl+");
 // FIXME: maybe should be using GUI::shortkey_ctrl_prefix() or equivalent?
@@ -1019,6 +1019,8 @@ void MainFrame::update_layout()
         m_plater->Reparent(m_tabpanel);
         m_tabpanel->InsertPage(tp3DEditor, m_plater, _L("Slicer"), std::string("tab_3d_active"), std::string("tab_3d_active"), false);
         m_tabpanel->InsertPage(tpPreview, m_plater, _L("Vorschau"), std::string("tab_preview_active"), std::string("tab_preview_active"), false);
+        // FINAL-MASTER: Preview is a slicer sub-mode, not a primary product navigation item.
+        m_tabpanel->GetBtnsListCtrl()->ShowPageButton(tpPreview, false);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND | wxTOP, 0);
 
         m_tabpanel->Bind(wxCUSTOMEVT_NOTEBOOK_SEL_CHANGED, [this](wxCommandEvent& evt)
@@ -1109,7 +1111,7 @@ void MainFrame::shutdown()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "MainFrame::shutdown enter";
 #ifdef __WXGTK__
-    // Edge panels are child windows — wxWidgets destroys them automatically.
+    // Edge panels are child windows \u2014 wxWidgets destroys them automatically.
     m_edge_bottom = nullptr;
     m_edge_left   = nullptr;
     m_edge_right  = nullptr;
@@ -1351,16 +1353,16 @@ void MainFrame::init_tabpanel() {
         m_multi_machine = new MultiMachinePage(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
         m_multi_machine->SetBackgroundColour(wxColour("#061018"));
         // TODO: change the bitmap
-        m_tabpanel->AddPage(m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"), std::string("tab_multi_active"), false);
+        m_tabpanel->AddPage(m_multi_machine, wxString(L"Ger\u00E4te"), std::string("tab_multi_active"), std::string("tab_multi_active"), false);
     }
 
     m_project = new ProjectPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     m_project->SetBackgroundColour(wxColour("#061018"));
-    m_tabpanel->AddPage(m_project, _L("Dateien"), std::string("tab_auxiliary_active"), std::string("tab_auxiliary_active"), false);
+    m_tabpanel->AddPage(m_project, _L("Material"), std::string("tab_auxiliary_active"), std::string("tab_auxiliary_active"), false);
 
     m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     m_calibration->SetBackgroundColour(wxColour("#061018"));
-    m_tabpanel->AddPage(m_calibration, _L("Kalibrierung"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
+    m_tabpanel->AddPage(m_calibration, _L("Einstellungen"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
 
     if (m_plater) {
         // load initial config
@@ -1409,7 +1411,7 @@ void MainFrame::show_device(bool bBBLPrinter) {
             }
             // TODO: change the bitmap
             m_multi_machine->Show(false);
-            m_tabpanel->InsertPage(tpMultiDevice, m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"),
+            m_tabpanel->InsertPage(tpMultiDevice, m_multi_machine, wxString(L"Ger\u00E4te"), std::string("tab_multi_active"),
                                    std::string("tab_multi_active"), false);
         }
         if (!m_calibration) {
@@ -1419,7 +1421,7 @@ void MainFrame::show_device(bool bBBLPrinter) {
         m_calibration->Show(false);
         // Calibration is always the last page, so don't use InsertPage here. Otherwise, if multi_machine page is not enabled,
         // the calibration tab won't be properly added as well, due to the TabPosition::tpCalibration no longer matches the real tab position.
-        m_tabpanel->AddPage(m_calibration, _L("Kalibrierung"), std::string("tab_calibration_active"),
+        m_tabpanel->AddPage(m_calibration, _L("Einstellungen"), std::string("tab_calibration_active"),
                                std::string("tab_calibration_active"), false);
 
 #ifdef _MSW_DARK_MODE
