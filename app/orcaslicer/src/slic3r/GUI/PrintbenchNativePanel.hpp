@@ -6,6 +6,7 @@
 #include <wx/scrolwin.h>
 #include <wx/stattext.h>
 #include <wx/button.h>
+#include <wx/gauge.h>
 
 class wxMediaCtrl2;
 
@@ -44,6 +45,7 @@ private:
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
     wxStaticText* m_job_name{nullptr};
+    wxGauge* m_progress_gauge{nullptr};
     wxStaticText* m_progress{nullptr};
     wxStaticText* m_layers{nullptr};
     wxStaticText* m_remaining{nullptr};
@@ -55,6 +57,7 @@ private:
     wxStaticText* m_ams_summary{nullptr};
     wxStaticText* m_wifi{nullptr};
     wxStaticText* m_camera{nullptr};
+    std::array<wxStaticText*, 3> m_temp_values{};
     wxStaticText* m_ams_environment{nullptr};
     std::array<wxStaticText*, 4> m_ams_slots{};
 };
