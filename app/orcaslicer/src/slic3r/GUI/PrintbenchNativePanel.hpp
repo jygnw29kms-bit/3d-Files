@@ -3,6 +3,8 @@
 #include "PrintbenchCollector.hpp"
 
 #include <array>
+#include <chrono>
+#include <deque>
 #include <wx/scrolwin.h>
 #include <wx/stattext.h>
 #include <wx/button.h>
@@ -29,6 +31,20 @@ private:
     wxPanel* make_card(wxWindow* parent, const wxString& title, wxBoxSizer*& body);
     wxStaticText* add_value(wxWindow* parent, wxSizer* sizer, const wxString& caption);
     void apply_snapshot(const PrintbenchSnapshot& snapshot);
+
+    struct HistoryEntry
+    {
+        wxString finished_at;
+        wxString status;
+        wxString job_name;
+        int observed_seconds{0};
+    };
+
+    void load_history();
+    void save_history() const;
+    void update_history_ui();
+    void observe_history(const PrintbenchSnapshot& snapshot);
+    void append_history(const wxString& job_name, const wxString& status, int observed_seconds);
 
     PrintbenchCollector m_collector;
     MachineObject* m_machine{nullptr};
@@ -59,6 +75,12 @@ private:
     wxStaticText* m_wifi{nullptr};
     wxStaticText* m_camera{nullptr};
     wxStaticText* m_device_status{nullptr};
+    std::array<wxStaticText*, 3> m_history_rows{};
+    std::deque<HistoryEntry> m_history;
+    bool m_history_tracking{false};
+    wxString m_history_job_name;
+    std::chrono::steady_clock::time_point m_history_started{};
+    std::string m_previous_print_state;
     std::array<wxStaticText*, 3> m_temp_values{};
     wxStaticText* m_ams_environment{nullptr};
     std::array<wxStaticText*, 4> m_ams_slots{};

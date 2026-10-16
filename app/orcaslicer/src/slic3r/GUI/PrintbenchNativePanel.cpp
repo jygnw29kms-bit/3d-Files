@@ -11,6 +11,11 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <fstream>
+#include <wx/datetime.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
+#include <wx/textfile.h>
 #include <wx/dcbuffer.h>
 #include <wx/sizer.h>
 #include <wx/statline.h>
@@ -416,10 +421,11 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     bottom->Add(device_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* history_card = make_card(this, "LETZTE DRUCKE", body);
-    auto* history_text = new wxStaticText(history_card, wxID_ANY, "Lokale Druckhistorie wird direkt in PRINTBENCH gefuehrt. Noch keine Sitzungseintraege.");
-    style_label(history_text, 10, false, PB_MUTED);
-    history_text->Wrap(FromDIP(420));
-    body->Add(history_text, 0, wxTOP, FromDIP(4));
+    for (size_t i = 0; i < m_history_rows.size(); ++i) {
+        m_history_rows[i] = new wxStaticText(history_card, wxID_ANY, i == 0 ? "Noch keine lokalen Druckabschluesse." : "");
+        style_label(m_history_rows[i], 9, i == 0, i == 0 ? PB_MUTED : PB_TEXT);
+        body->Add(m_history_rows[i], 0, wxEXPAND | wxBOTTOM, FromDIP(5));
+    }
     bottom->Add(history_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* action_card = make_card(this, "SYSTEM & AKTIONEN", body);
@@ -479,6 +485,8 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     root->Add(bottom, 2, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
     shell->Add(root, 1, wxEXPAND);
     SetSizer(shell);
+    load_history();
+    update_history_ui();
     Layout();
 }
 
@@ -527,6 +535,7 @@ void PrintbenchNativePanel::refresh_from_machine(MachineObject* machine)
 
 void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
 {
+    observe_history(s);
     // Binding FINAL-MASTER keeps the model name dominant; the live collector
     // still supplies the connection/state data below it.
     m_printer_name->SetLabel("Bambu Lab P2S");
@@ -659,6 +668,130 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
         }
     }
     Layout();
+}
+
+void PrintbenchNativePanel::observe_history(const PrintbenchSnapshot& s)
+{
+    const bool active = s.print_state == "RUNNING" || s.print_state == "PAUSE";
+    const bool was_active = m_previous_print_state == "RUNNING" || m_previous_print_state == "PAUSE";
+
+    if (active && !m_history_tracking) {
+        m_history_tracking = true;
+        m_history_started = std::chrono::steady_clock::now();
+        m_history_job_name = s.job_name.empty() ? "Druckauftrag" : wxString::FromUTF8(s.job_name);
+    } else if (active && !s.job_name.empty()) {
+        m_history_job_name = wxString::FromUTF8(s.job_name);
+    }
+
+    if (m_history_tracking && was_active && !active && s.online) {
+        const int observed_seconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - m_history_started).count());
+        wxString status = "Beendet";
+        if (s.print_state == "FINISH")
+            status = "Fertig";
+        else if (s.print_state == "FAILED" || s.print_state == "ERROR")
+            status = "Fehler";
+        else if (s.print_state == "CANCEL" || s.print_state == "CANCELLED")
+            status = "Abgebrochen";
+        append_history(m_history_job_name, status, observed_seconds);
+        m_history_tracking = false;
+        m_history_job_name.clear();
+    }
+
+    // Going offline is not proof that a print ended. Keep tracking and wait for
+    // a later online state instead of manufacturing a false history entry.
+    if (s.online)
+        m_previous_print_state = s.print_state;
+}
+
+void PrintbenchNativePanel::append_history(const wxString& job_name, const wxString& status, int observed_seconds)
+{
+    HistoryEntry entry;
+    entry.finished_at = wxDateTime::Now().Format("%d.%m. %H:%M");
+    entry.status = status;
+    entry.job_name = job_name.empty() ? "Druckauftrag" : job_name;
+    entry.observed_seconds = std::max(0, observed_seconds);
+    m_history.push_front(entry);
+    while (m_history.size() > 20)
+        m_history.pop_back();
+    save_history();
+    update_history_ui();
+}
+
+void PrintbenchNativePanel::update_history_ui()
+{
+    for (auto* row : m_history_rows) {
+        if (row) {
+            row->SetLabel("");
+            row->SetForegroundColour(PB_TEXT);
+        }
+    }
+    if (m_history.empty()) {
+        if (m_history_rows[0]) {
+            m_history_rows[0]->SetLabel("Noch keine lokalen Druckabschluesse.");
+            m_history_rows[0]->SetForegroundColour(PB_MUTED);
+        }
+        return;
+    }
+
+    for (size_t i = 0; i < std::min(m_history_rows.size(), m_history.size()); ++i) {
+        const auto& entry = m_history[i];
+        const int minutes = entry.observed_seconds / 60;
+        wxString duration = minutes >= 60
+            ? wxString::Format("%dh %02dm", minutes / 60, minutes % 60)
+            : wxString::Format("%dm", minutes);
+        const wxString marker = entry.status == "Fertig" ? wxString(L"\u2713") : wxString(L"\u2022");
+        m_history_rows[i]->SetLabel(wxString::Format("%s  %s   %s   %s", marker, entry.job_name, entry.finished_at, duration));
+        m_history_rows[i]->SetForegroundColour(entry.status == "Fertig" ? PB_OK : PB_TEXT);
+    }
+}
+
+void PrintbenchNativePanel::load_history()
+{
+    const wxString dir = wxStandardPaths::Get().GetUserLocalDataDir();
+    const wxString path = wxFileName(dir, "printbench-print-history.tsv").GetFullPath();
+    if (!wxFileExists(path))
+        return;
+
+    wxTextFile file;
+    if (!file.Open(path))
+        return;
+    for (size_t i = 0; i < file.GetLineCount() && m_history.size() < 20; ++i) {
+        const wxArrayString fields = wxSplit(file.GetLine(i), '\t', '\0');
+        if (fields.size() != 4)
+            continue;
+        long seconds = 0;
+        fields[2].ToLong(&seconds);
+        HistoryEntry entry{fields[0], fields[1], fields[3], static_cast<int>(std::max(0L, seconds))};
+        m_history.push_back(entry);
+    }
+    file.Close();
+}
+
+void PrintbenchNativePanel::save_history() const
+{
+    const wxString dir = wxStandardPaths::Get().GetUserLocalDataDir();
+    if (!wxDirExists(dir))
+        wxFileName::Mkdir(dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    const wxString path = wxFileName(dir, "printbench-print-history.tsv").GetFullPath();
+    wxTextFile file;
+    if (wxFileExists(path)) {
+        if (!file.Open(path))
+            return;
+        file.Clear();
+    } else if (!file.Create(path)) {
+        return;
+    }
+
+    for (const auto& entry : m_history) {
+        wxString safe_name = entry.job_name;
+        safe_name.Replace("\t", " ");
+        safe_name.Replace("\r", " ");
+        safe_name.Replace("\n", " ");
+        file.AddLine(wxString::Format("%s\t%s\t%d\t%s", entry.finished_at, entry.status, entry.observed_seconds, safe_name));
+    }
+    file.Write();
+    file.Close();
 }
 
 } // namespace GUI
