@@ -140,13 +140,23 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         wxString(L"\u00DCbersicht"), L"Live Ansicht", L"Steuerung", L"AMS 2 Pro", L"Material",
         wxString(L"Druckauftr\u00E4ge"), L"Historie", L"Dateien", L"Kamera", wxString(L"Ger\u00E4te-Setup"),
         L"Netzwerk", L"Sicherheit", L"Diagnose"};
+    // Reuse Orca's native vector resources so the FINAL-MASTER rail stays crisp
+    // at every Windows scaling level instead of falling back to text glyphs.
+    const std::array<const char*, 13> nav_icons{
+        "monitor", "monitor_camera", "monitor_axis_home_icon", "ams_setting_normal", "filament",
+        "print_control_resume", "print_info_time", "topbar_file", "camera_setting", "printer",
+        "printer_in_lan", "info", "calib_sf"};
     for (size_t i = 0; i < nav_items.size(); ++i) {
         auto* item = new wxPanel(sidebar, wxID_ANY);
         item->SetBackgroundColour(i == 0 ? wxColour(8, 102, 218) : sidebar->GetBackgroundColour());
         auto* item_sizer = new wxBoxSizer(wxHORIZONTAL);
+        auto icon_bitmap = create_scaled_bitmap(nav_icons[i], item, 14);
+        auto* icon = new wxStaticBitmap(item, wxID_ANY, icon_bitmap);
         auto* label = new wxStaticText(item, wxID_ANY, nav_items[i]);
         style_label(label, 10, i == 0, i == 0 ? *wxWHITE : PB_TEXT);
-        item_sizer->Add(label, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(9));
+        item_sizer->Add(icon, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(9));
+        item_sizer->Add(label, 1, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM | wxALIGN_CENTER_VERTICAL,
+                        FromDIP(8));
         item->SetSizer(item_sizer);
         side->Add(item, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(3));
     }
