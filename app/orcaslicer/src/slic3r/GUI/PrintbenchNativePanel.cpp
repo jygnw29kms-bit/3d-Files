@@ -224,7 +224,11 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_stop = new wxButton(quick_card, wxID_ANY, "STOP");
     m_light = new wxButton(quick_card, wxID_ANY, "LICHT");
     for (auto* button : {m_print, m_pause_resume, m_stop, m_light}) {
-        button->SetMinSize(wxSize(FromDIP(92), FromDIP(54)));
+        button->SetMinSize(wxSize(FromDIP(96), FromDIP(66)));
+        wxFont button_font = button->GetFont();
+        button_font.SetPointSize(10);
+        button_font.SetWeight(wxFONTWEIGHT_BOLD);
+        button->SetFont(button_font);
         button->SetForegroundColour(*wxWHITE);
     }
     m_print->SetBackgroundColour(wxColour("#075C46"));
@@ -261,9 +265,10 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* middle = new wxBoxSizer(wxHORIZONTAL);
     auto* print_card = make_card(this, "AKTUELLER DRUCK", body);
-    m_progress = add_value(print_card, body, "Progress");
-    m_layers = add_value(print_card, body, "Layers");
-    m_remaining = add_value(print_card, body, "Remaining");
+    m_job_name = add_value(print_card, body, "Datei");
+    m_progress = add_value(print_card, body, "Fortschritt");
+    m_layers = add_value(print_card, body, "Schichten");
+    m_remaining = add_value(print_card, body, "Restzeit");
     middle->Add(print_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* temp_card = make_card(this, "TEMPERATUREN (LIVE)", body);
@@ -296,13 +301,13 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* bottom = new wxBoxSizer(wxHORIZONTAL);
     auto* device_card = make_card(this, "GERAETESTATUS", body);
-    auto* device_text = new wxStaticText(device_card, wxID_ANY, "Collector: NATIVE\nTransport: Orca LAN device model\nCloud: not required\nBambu Studio: not required");
+    auto* device_text = new wxStaticText(device_card, wxID_ANY, "Collector: NATIVE        LAN API: DIREKT\nTransport: Orca LAN     Modell: P2S\nCloud: NICHT ERFORDERLICH\nBambu Studio: NICHT ERFORDERLICH");
     style_label(device_text, 10, false, PB_MUTED);
     body->Add(device_text, 0, wxTOP, FromDIP(4));
     bottom->Add(device_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* history_card = make_card(this, "LETZTE DRUCKE", body);
-    auto* history_text = new wxStaticText(history_card, wxID_ANY, "Native session history will use the integrated PRINTBENCH store.");
+    auto* history_text = new wxStaticText(history_card, wxID_ANY, "Lokale Druckhistorie wird direkt in PRINTBENCH gefuehrt. Noch keine Sitzungseintraege.");
     style_label(history_text, 10, false, PB_MUTED);
     history_text->Wrap(FromDIP(420));
     body->Add(history_text, 0, wxTOP, FromDIP(4));
@@ -404,10 +409,19 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
     }
     m_wifi->SetLabel(s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal));
 
-    m_progress->SetLabel(wxString::Format("%d %%", std::clamp(s.progress, 0, 100)));
-    m_layers->SetLabel(wxString::Format("%d / %d", s.layer_current, s.layer_total));
-    const int minutes = std::max(0, s.remaining_seconds / 60);
-    m_remaining->SetLabel(wxString::Format("%d min", minutes));
+    const bool active_print = s.print_state == "RUNNING" || s.print_state == "PAUSE";
+    if (m_job_name)
+        m_job_name->SetLabel(active_print ? (s.job_name.empty() ? "Aktiver Druck" : wxString::FromUTF8(s.job_name)) : "Kein aktiver Druck");
+    if (active_print) {
+        m_progress->SetLabel(wxString::Format("%d %%", std::clamp(s.progress, 0, 100)));
+        m_layers->SetLabel(wxString::Format("%d / %d", s.layer_current, s.layer_total));
+        const int minutes = std::max(0, s.remaining_seconds / 60);
+        m_remaining->SetLabel(wxString::Format("%d min", minutes));
+    } else {
+        m_progress->SetLabel("--");
+        m_layers->SetLabel("--");
+        m_remaining->SetLabel("--");
+    }
 
     m_nozzle->SetLabel(format_temp(s.nozzle_c, s.nozzle_target_c));
     m_bed->SetLabel(format_temp(s.bed_c, s.bed_target_c));

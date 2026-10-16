@@ -41,6 +41,7 @@ private:
     wxStaticText* m_printer_name{nullptr};
     wxStaticText* m_online{nullptr};
     wxStaticText* m_state{nullptr};
+    wxStaticText* m_job_name{nullptr};
     wxStaticText* m_progress{nullptr};
     wxStaticText* m_layers{nullptr};
     wxStaticText* m_remaining{nullptr};

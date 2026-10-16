@@ -18,6 +18,7 @@ PrintbenchSnapshot PrintbenchCollector::collect(MachineObject* machine) const
     if (!machine->get_dev_name().empty())
         out.printer_name = machine->get_dev_name();
     out.print_state = machine->print_status.empty() ? "UNKNOWN" : machine->print_status;
+    out.job_name = !machine->subtask_name.empty() ? machine->subtask_name : machine->m_gcode_file;
     out.progress = machine->mc_print_percent;
     out.remaining_seconds = machine->mc_left_time;
     out.layer_current = machine->curr_layer;

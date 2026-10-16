@@ -21,6 +21,7 @@ struct PrintbenchSnapshot
     bool        online{false};
     std::string printer_name{"Bambu Lab P2S"};
     std::string print_state{"OFFLINE"};
+    std::string job_name;
     int         progress{0};
     int         remaining_seconds{0};
     int         layer_current{0};
