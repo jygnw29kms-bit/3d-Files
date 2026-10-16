@@ -116,7 +116,11 @@ MonitorPanel::MonitorPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     init_tabpanel();
 
     m_main_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_main_sizer->Add(m_tabpanel, 1, wxEXPAND | wxLEFT, 0);
+    // 135er-PRINTBENCH owns the complete Device viewport. Keep Orca's legacy
+    // status/storage/firmware/HMS tabbook alive for internal services only,
+    // but never expose its white sidebar in the PRINTBENCH product surface.
+    m_tabpanel->Hide();
+    m_main_sizer->Add(m_printbench_panel, 1, wxEXPAND, 0);
     SetSizerAndFit(m_main_sizer);
 
     init_timer();
@@ -204,8 +208,9 @@ void MonitorPanel::init_tabpanel()
 
     // 135er-PRINTBENCH: native Device Center. The desktop application owns
     // collection, presentation and control; no browser/Pi bridge is required.
-    m_printbench_panel = new PrintbenchNativePanel(m_tabpanel);
-    m_tabpanel->AddPage(m_printbench_panel, _L("PRINTBENCH"), "", false);
+    // It is deliberately parented directly to MonitorPanel so it can own the
+    // full Device viewport instead of being embedded in Orca's legacy Tabbook.
+    m_printbench_panel = new PrintbenchNativePanel(this);
 
     std::string network_ver = Slic3r::NetworkAgent::get_version();
     if (!network_ver.empty()) {
@@ -215,9 +220,8 @@ void MonitorPanel::init_tabpanel()
     m_initialized = true;
     show_status((int)MonitorStatus::MONITOR_NO_PRINTER);
 
-    // PRINTBENCH is the primary native Device surface. Native Orca status/storage/HMS
-    // tabs remain available, but the desktop product starts on PRINTBENCH.
-    m_tabpanel->SetSelection(PT_PRINTBENCH);
+    // PRINTBENCH is the primary native Device surface. Legacy Orca tabs remain
+    // instantiated only for internal services and are intentionally hidden.
 }
 
 void MonitorPanel::set_default()

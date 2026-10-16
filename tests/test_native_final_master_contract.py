@@ -3,14 +3,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 GUI = ROOT / 'app' / 'orcaslicer' / 'src' / 'slic3r' / 'GUI'
 MONITOR = (GUI / 'Monitor.cpp').read_text(encoding='utf-8')
-PANEL = (GUI / 'PrintbenchNativePanel.cpp').read_text(encoding='utf-8')
+PANEL_CPP = (GUI / 'PrintbenchNativePanel.cpp').read_text(encoding='utf-8')
+PANEL_HPP = (GUI / 'PrintbenchNativePanel.hpp').read_text(encoding='utf-8')
+PANEL = PANEL_CPP + '\n' + PANEL_HPP
 SPEC = (ROOT / 'docs' / 'design' / 'PRINTBENCH_FINAL_MASTER.md').read_text(encoding='utf-8')
 
 
 def test_printbench_device_surface_is_native():
-    assert 'new PrintbenchNativePanel' in MONITOR
-    assert 'AddPage(m_printbench_panel' in MONITOR
-    assert 'SetSelection(PT_PRINTBENCH)' in MONITOR
+    assert 'new PrintbenchNativePanel(this)' in MONITOR
+    assert 'm_main_sizer->Add(m_printbench_panel, 1, wxEXPAND, 0)' in MONITOR
+    assert 'm_tabpanel->Hide()' in MONITOR
+    assert 'AddPage(m_printbench_panel' not in MONITOR
+    assert 'SetSelection(PT_PRINTBENCH)' not in MONITOR
     assert 'PrinterWebView' not in PANEL
     assert 'printbench-pi.local' not in PANEL
     assert 'http://' not in PANEL
