@@ -273,7 +273,7 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
 
 // BBS
 #ifndef __APPLE__
-#define BORDERLESS_FRAME_STYLE (wxRESIZE_BORDER | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX)
+#define BORDERLESS_FRAME_STYLE wxDEFAULT_FRAME_STYLE
 #else
 #define BORDERLESS_FRAME_STYLE (wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX)
 #endif
@@ -312,13 +312,14 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 #endif
 
 #ifdef __WXMSW__
+    // PRINTBENCH: keep the native Windows caption/system menu so the frame is
+    // always movable, resizable, minimizable, maximizable/restorable and closable.
     if (HWND hWnd = GetHandle(); hWnd != nullptr) {
         LONG_PTR style = GetWindowLongPtr(hWnd, GWL_STYLE);
-        if ((style & WS_CAPTION) != 0) {
-            SetWindowLongPtr(hWnd, GWL_STYLE, style & ~WS_CAPTION);
-            SetWindowPos(hWnd, nullptr, 0, 0, 0, 0,
-                         SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        }
+        style |= WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME;
+        SetWindowLongPtr(hWnd, GWL_STYLE, style);
+        SetWindowPos(hWnd, nullptr, 0, 0, 0, 0,
+                     SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 #endif
 
@@ -401,8 +402,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     }
 #endif // __APPLE__
 
-    // Load the icon either from the exe, or from the ico file.
+    // PRINTBENCH branding: window/taskbar icon comes from the branded EXE resource.
     SetIcon(main_frame_icon(wxGetApp().get_app_mode()));
+    SetTitle("135er-PRINTBENCH");
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -538,7 +540,8 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     update_layout();
     sizer->SetSizeHints(this);
 
-    #ifdef __WXMSW__
+    #if 0 && defined(__WXMSW__)
+    // Legacy Orca borderless-frame workaround disabled for native PRINTBENCH chrome.
     // SetMaximize causes the window to overlap the taskbar, due to the fact this window has wxMAXIMIZE_BOX off
     // https://forums.wxwidgets.org/viewtopic.php?t=50634
     // Fix it here
@@ -855,6 +858,11 @@ static void AdjustWorkingAreaForAutoHide(const HWND hWnd, MINMAXINFO* mmi)
 
 WXLRESULT MainFrame::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam)
 {
+    // PRINTBENCH uses the native Windows non-client frame. The old Orca custom
+    // titlebar path removed the caption and therefore also the system buttons.
+    return wxFrame::MSWWindowProc(nMsg, wParam, lParam);
+
+#if 0
     HWND hWnd = GetHandle();
     /* When we have a custom titlebar in the window, we don't need the non-client area of a normal window
      * to be painted. In order to achieve this, we handle the "WM_NCCALCSIZE" which is responsible for the
@@ -940,6 +948,7 @@ WXLRESULT MainFrame::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam
     }
     }
     return wxFrame::MSWWindowProc(nMsg, wParam, lParam);
+#endif
 }
 
 #endif
