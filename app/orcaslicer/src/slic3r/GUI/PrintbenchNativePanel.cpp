@@ -580,26 +580,43 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
         action_grid->AddGrowableCol(col, 1);
     const std::array<wxString, 6> action_names{
         L"Datei senden", L"Kalibrieren", L"Neustart", L"AMS trocknen", L"Firmware", L"Logs anzeigen"};
+    const std::array<const char*, 6> action_icons{
+        "topbar_file", "calib_sf", "refresh", "ams_setting_normal", "printer_sync", "info"};
     std::array<wxButton*, 6> action_buttons{};
     for (size_t i = 0; i < action_buttons.size(); ++i) {
         action_buttons[i] = new wxButton(action_card, wxID_ANY, action_names[i]);
-        action_buttons[i]->SetMinSize(wxSize(FromDIP(95), FromDIP(34)));
+        action_buttons[i]->SetMinSize(wxSize(FromDIP(118), FromDIP(42)));
         action_buttons[i]->SetBackgroundColour(wxColour(8, 37, 55));
         action_buttons[i]->SetForegroundColour(PB_TEXT);
+        action_buttons[i]->SetBitmap(create_scaled_bitmap(action_icons[i], action_buttons[i], 14));
+        action_buttons[i]->SetBitmapMargins(FromDIP(7), 0);
+        wxFont action_font = action_buttons[i]->GetFont();
+        action_font.SetPointSize(9);
+        action_font.SetWeight(wxFONTWEIGHT_BOLD);
+        action_buttons[i]->SetFont(action_font);
         action_grid->Add(action_buttons[i], 1, wxEXPAND);
     }
+    action_buttons[0]->SetBackgroundColour(wxColour("#0A4C70"));
     action_buttons[0]->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
         if (wxGetApp().mainframe)
             wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor);
     });
+    action_buttons[1]->SetBackgroundColour(wxColour("#0A4C70"));
+    action_buttons[1]->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
+        if (wxGetApp().mainframe)
+            wxGetApp().mainframe->select_tab(MainFrame::tpCalibration);
+    });
+    action_buttons[5]->SetBackgroundColour(wxColour("#0A4C70"));
     action_buttons[5]->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
         if (wxGetApp().mainframe)
             wxGetApp().mainframe->show_log_window();
     });
-    for (size_t i : {size_t(1), size_t(2), size_t(3), size_t(4)}) {
-        action_buttons[i]->Enable(false);
-        action_buttons[i]->SetToolTip("Noch nicht verfuegbar");
-    }
+    action_buttons[2]->Enable(false);
+    action_buttons[2]->SetToolTip("Kein verifizierter P2S-Neustartbefehl im aktuellen LAN-Pfad");
+    action_buttons[3]->Enable(false);
+    action_buttons[3]->SetToolTip("AMS-Trocknen benoetigt Material-, Temperatur- und Zeitparameter");
+    action_buttons[4]->Enable(false);
+    action_buttons[4]->SetToolTip("Firmware-Verwaltung wird erst nach verifiziertem P2S-Updatepfad aktiviert");
     body->Add(action_grid, 0, wxEXPAND | wxTOP, FromDIP(4));
     bottom->Add(action_card, 1, wxEXPAND);
 
