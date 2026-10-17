@@ -82,7 +82,7 @@ private:
     wxStaticText* m_ams_summary{nullptr};
     wxStaticText* m_wifi{nullptr};
     wxStaticText* m_camera{nullptr};
-    wxStaticText* m_device_status{nullptr};
+    std::array<wxStaticText*, 6> m_device_status_values{};
     std::array<wxStaticText*, 3> m_history_rows{};
     std::array<wxPanel*, 13> m_nav_rows{};
     std::array<wxStaticText*, 13> m_nav_labels{};

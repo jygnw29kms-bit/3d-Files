@@ -542,10 +542,27 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
 
     auto* bottom = new wxBoxSizer(wxHORIZONTAL);
     auto* device_card = make_card(this, "GERAETESTATUS", body);
-    m_device_status = new wxStaticText(device_card, wxID_ANY,
-        "LAN: OFFLINE        Transport: Orca LAN\nP2S: Nicht verbunden     Kamera: --\nAMS 2 Pro: --             WLAN: --\nLokalbetrieb: AKTIV       Cloud: NICHT ERFORDERLICH");
-    style_label(m_device_status, 10, false, PB_MUTED);
-    body->Add(m_device_status, 0, wxTOP, FromDIP(4));
+    auto* device_grid = new wxFlexGridSizer(2, 3, FromDIP(8), FromDIP(8));
+    for (int col = 0; col < 3; ++col)
+        device_grid->AddGrowableCol(col, 1);
+    const std::array<wxString, 6> status_names{
+        L"P2S", L"KAMERA", L"AMS 2 PRO", L"WLAN", L"LOKALBETRIEB", L"CLOUD"};
+    const std::array<wxString, 6> status_initial{
+        L"●  Offline", L"●  --", L"●  --", L"●  --", L"●  Aktiv", L"●  Nicht erforderlich"};
+    for (size_t i = 0; i < status_names.size(); ++i) {
+        auto* cell = new wxPanel(device_card, wxID_ANY);
+        cell->SetBackgroundColour(wxColour(8, 25, 37));
+        auto* cell_sizer = new wxBoxSizer(wxVERTICAL);
+        auto* caption = new wxStaticText(cell, wxID_ANY, status_names[i]);
+        style_label(caption, 8, true, PB_MUTED);
+        m_device_status_values[i] = new wxStaticText(cell, wxID_ANY, status_initial[i]);
+        style_label(m_device_status_values[i], 10, true, i >= 4 ? PB_OK : PB_MUTED);
+        cell_sizer->Add(caption, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(8));
+        cell_sizer->Add(m_device_status_values[i], 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(8));
+        cell->SetSizer(cell_sizer);
+        device_grid->Add(cell, 1, wxEXPAND);
+    }
+    body->Add(device_grid, 0, wxEXPAND | wxTOP, FromDIP(4));
     bottom->Add(device_card, 1, wxEXPAND | wxRIGHT, FromDIP(10));
 
     auto* history_card = make_card(this, "LETZTE DRUCKE", body);
@@ -715,16 +732,20 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
         m_ready_banner->SetForegroundColour(ready ? PB_OK : (s.online ? PB_TEXT : PB_MUTED));
     }
     m_wifi->SetLabel(s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal));
-    if (m_device_status) {
-        const wxString lan = s.online ? "ONLINE" : "OFFLINE";
-        const wxString p2s = s.online ? "Verbunden" : "Nicht verbunden";
-        const wxString camera_state = s.has_camera ? "READY" : "--";
-        const wxString ams_state = s.has_ams ? "VERBUNDEN" : "--";
-        const wxString wifi = s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal);
-        m_device_status->SetLabel(wxString::Format(
-            "LAN: %s        Transport: Orca LAN\nP2S: %s     Kamera: %s\nAMS 2 Pro: %s             WLAN: %s\nLokalbetrieb: AKTIV       Cloud: NICHT ERFORDERLICH",
-            lan, p2s, camera_state, ams_state, wifi));
-        m_device_status->SetForegroundColour(s.online ? PB_TEXT : PB_MUTED);
+    const wxString wifi = s.wifi_signal.empty() ? "--" : wxString::FromUTF8(s.wifi_signal);
+    const std::array<wxString, 6> device_values{
+        s.online ? wxString(L"●  Verbunden") : wxString(L"●  Offline"),
+        s.has_camera ? wxString(L"●  Ready") : wxString(L"●  --"),
+        s.has_ams ? wxString(L"●  Verbunden") : wxString(L"●  --"),
+        wxString(L"●  ") + wifi,
+        wxString(L"●  Aktiv"),
+        wxString(L"●  Nicht erforderlich")};
+    const std::array<bool, 6> device_ok{
+        s.online, s.has_camera, s.has_ams, s.online && !s.wifi_signal.empty(), true, true};
+    for (size_t i = 0; i < m_device_status_values.size(); ++i) {
+        if (!m_device_status_values[i]) continue;
+        m_device_status_values[i]->SetLabel(device_values[i]);
+        m_device_status_values[i]->SetForegroundColour(device_ok[i] ? PB_OK : PB_MUTED);
     }
 
     const bool active_print = s.print_state == "RUNNING" || s.print_state == "PAUSE";
