@@ -20,6 +20,7 @@ namespace GUI {
 class MediaPlayCtrl;
 class PrintbenchTempChart;
 class PrintbenchProgressBar;
+class PrintbenchAmsSlotCard;
 
 class PrintbenchNativePanel : public wxScrolledWindow
 {
@@ -98,7 +99,7 @@ private:
     std::string m_previous_print_state;
     std::array<wxStaticText*, 3> m_temp_values{};
     wxStaticText* m_ams_environment{nullptr};
-    std::array<wxStaticText*, 4> m_ams_slots{};
+    std::array<PrintbenchAmsSlotCard*, 4> m_ams_slots{};
 };
 
 } // namespace GUI

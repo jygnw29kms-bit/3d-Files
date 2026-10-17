@@ -123,6 +123,96 @@ private:
     std::deque<std::array<double, 3>> m_samples;
 };
 
+class PrintbenchAmsSlotCard : public wxPanel
+{
+public:
+    PrintbenchAmsSlotCard(wxWindow* parent, int slot)
+        : wxPanel(parent, wxID_ANY), m_slot(slot)
+    {
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        SetBackgroundColour(wxColour(7, 21, 31));
+        SetMinSize(wxSize(FromDIP(112), FromDIP(92)));
+        Bind(wxEVT_PAINT, &PrintbenchAmsSlotCard::on_paint, this);
+    }
+
+    void set_slot(bool present, const wxString& material, const wxColour& colour, int remain)
+    {
+        m_present = present;
+        m_material = material.empty() ? (present ? "FILAMENT" : "LEER") : material;
+        m_colour = colour;
+        m_remain = remain;
+        Refresh(false);
+    }
+
+private:
+    void on_paint(wxPaintEvent&)
+    {
+        wxAutoBufferedPaintDC dc(this);
+        const wxSize size = GetClientSize();
+        dc.SetBackground(wxBrush(GetBackgroundColour()));
+        dc.Clear();
+        if (size.x < 20 || size.y < 20) return;
+
+        dc.SetPen(wxPen(PB_BORDER, 1));
+        dc.SetBrush(wxBrush(wxColour(8, 25, 37)));
+        dc.DrawRoundedRectangle(0, 0, size.x - 1, size.y - 1, FromDIP(6));
+
+        wxFont tiny = GetFont();
+        tiny.SetPointSize(8); tiny.SetWeight(wxFONTWEIGHT_BOLD);
+        dc.SetFont(tiny);
+        dc.SetTextForeground(PB_MUTED);
+        dc.DrawText(wxString::Format("SLOT %d", m_slot), FromDIP(8), FromDIP(6));
+
+        if (m_remain >= 0 && m_present) {
+            const wxString pct = wxString::Format("%d %%", m_remain);
+            const wxSize ext = dc.GetTextExtent(pct);
+            dc.DrawText(pct, size.x - ext.x - FromDIP(8), FromDIP(6));
+        }
+
+        const int cx = FromDIP(31);
+        const int cy = FromDIP(52);
+        const int outer = FromDIP(23);
+        const int inner = FromDIP(9);
+        if (m_present) {
+            dc.SetPen(wxPen(m_colour.ChangeLightness(78), std::max(1, FromDIP(2))));
+            dc.SetBrush(wxBrush(m_colour));
+            dc.DrawCircle(cx, cy, outer);
+            dc.SetPen(wxPen(wxColour(18, 40, 53), std::max(1, FromDIP(2))));
+            dc.SetBrush(wxBrush(wxColour(5, 17, 27)));
+            dc.DrawCircle(cx, cy, inner);
+            dc.SetPen(wxPen(wxColour(220, 232, 240), 1));
+            dc.DrawCircle(cx, cy, std::max(2, FromDIP(3)));
+        } else {
+            dc.SetPen(wxPen(PB_BORDER, std::max(1, FromDIP(2)), wxPENSTYLE_SHORT_DASH));
+            dc.SetBrush(*wxTRANSPARENT_BRUSH);
+            dc.DrawCircle(cx, cy, outer);
+            dc.DrawCircle(cx, cy, inner);
+        }
+
+        wxFont material_font = GetFont();
+        material_font.SetPointSize(10); material_font.SetWeight(wxFONTWEIGHT_BOLD);
+        dc.SetFont(material_font);
+        dc.SetTextForeground(m_present ? PB_TEXT : PB_MUTED);
+        const int text_x = FromDIP(62);
+        dc.DrawText(m_material, text_x, FromDIP(38));
+        dc.SetFont(tiny);
+        dc.SetTextForeground(PB_MUTED);
+        dc.DrawText(m_present ? "AMS 2 Pro" : "Kein Filament", text_x, FromDIP(58));
+
+        if (m_present) {
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.SetBrush(wxBrush(m_colour));
+            dc.DrawRoundedRectangle(FromDIP(8), size.y - FromDIP(7), size.x - FromDIP(16), FromDIP(3), FromDIP(2));
+        }
+    }
+
+    int m_slot{1};
+    bool m_present{false};
+    wxString m_material{"LEER"};
+    wxColour m_colour{40, 62, 75};
+    int m_remain{-1};
+};
+
 class PrintbenchProgressBar : public wxPanel
 {
 public:
@@ -441,11 +531,8 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     for (int col = 0; col < 4; ++col)
         slot_grid->AddGrowableCol(col, 1);
     for (size_t i = 0; i < m_ams_slots.size(); ++i) {
-        m_ams_slots[i] = new wxStaticText(ams_card, wxID_ANY, wxString::Format("SLOT %d  --", static_cast<int>(i + 1)));
-        style_label(m_ams_slots[i], 10, true);
-        m_ams_slots[i]->SetBackgroundColour(wxColour(8, 22, 33));
-        m_ams_slots[i]->SetMinSize(wxSize(FromDIP(72), FromDIP(72)));
-        slot_grid->Add(m_ams_slots[i], 1, wxEXPAND | wxALL, FromDIP(6));
+        m_ams_slots[i] = new PrintbenchAmsSlotCard(ams_card, static_cast<int>(i + 1));
+        slot_grid->Add(m_ams_slots[i], 1, wxEXPAND);
     }
     body->Add(slot_grid, 0, wxEXPAND | wxTOP, FromDIP(10));
     middle->Add(ams_card, 1, wxEXPAND);
@@ -738,26 +825,15 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
 
     for (size_t i = 0; i < m_ams_slots.size(); ++i) {
         const auto& slot = s.ams_slots[i];
-        wxString text = wxString::Format("SLOT %d\n", static_cast<int>(i + 1));
-        if (slot.present) {
-            text += slot.material.empty() ? "FILAMENT" : wxString::FromUTF8(slot.material);
-            if (slot.remain >= 0)
-                text += wxString::Format("\n%d %%", slot.remain);
-        } else {
-            text += "EMPTY\n--";
-        }
-        m_ams_slots[i]->SetLabel(text);
+        wxColour colour(40, 62, 75);
         if (slot.present && slot.color.size() >= 6) {
             unsigned long rgb = 0;
-            if (wxString::FromUTF8(slot.color.substr(0, 6)).ToULong(&rgb, 16)) {
-                const wxColour c((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
-                m_ams_slots[i]->SetForegroundColour(c.GetLuminance() < 0.4 ? *wxWHITE : *wxBLACK);
-                m_ams_slots[i]->SetBackgroundColour(c);
-            }
-        } else {
-            m_ams_slots[i]->SetForegroundColour(PB_TEXT);
-            m_ams_slots[i]->SetBackgroundColour(wxColour(8, 22, 33));
+            if (wxString::FromUTF8(slot.color.substr(0, 6)).ToULong(&rgb, 16))
+                colour = wxColour((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
         }
+        const wxString material = slot.material.empty() ? wxString() : wxString::FromUTF8(slot.material);
+        if (m_ams_slots[i])
+            m_ams_slots[i]->set_slot(slot.present, material, colour, slot.remain);
     }
     Layout();
 }
