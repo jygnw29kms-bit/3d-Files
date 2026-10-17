@@ -38,8 +38,12 @@ PrintbenchSnapshot PrintbenchCollector::collect(MachineObject* machine) const
     }
 
     out.has_camera = machine->has_ipcam;
-    out.camera_recording = machine->camera_recording;
+    out.camera_recording = machine->camera_recording_when_printing;
     out.camera_timelapse = machine->camera_timelapse;
+    // P2S/N7 advertises support_timelapse=true but rejects the generic LAN
+    // ipcam_timelapse command with result=FAILURE, reason="unsupport common".
+    // Keep capability reporting truthful instead of exposing a dead switch.
+    out.camera_timelapse_control_supported = machine->is_support_timelapse && machine->printer_type != "N7";
     out.camera_resolution = machine->camera_resolution;
 
     if (auto* fila = machine->GetFilaSystem()) {

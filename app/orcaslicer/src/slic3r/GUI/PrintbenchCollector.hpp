@@ -36,6 +36,7 @@ struct PrintbenchSnapshot
     bool        has_camera{false};
     bool        camera_recording{false};
     bool        camera_timelapse{false};
+    bool        camera_timelapse_control_supported{false};
     std::string camera_resolution;
     bool        has_ams{false};
     float       ams_temp_c{0.0f};

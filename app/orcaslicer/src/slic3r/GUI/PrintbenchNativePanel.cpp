@@ -34,6 +34,12 @@ const wxColour PB_MUTED(122, 151, 170);
 const wxColour PB_ACCENT(0, 188, 230);
 const wxColour PB_OK(68, 214, 151);
 
+enum : int {
+    ID_PB_CAMERA_RECORD = wxID_HIGHEST + 4101,
+    ID_PB_CAMERA_TIMELAPSE,
+    ID_PB_CAMERA_RESOLUTION
+};
+
 void style_label(wxStaticText* label, int point_size, bool bold = false, const wxColour& colour = PB_TEXT)
 {
     wxFont font = label->GetFont();
@@ -301,6 +307,26 @@ PrintbenchNativePanel::PrintbenchNativePanel(wxWindow* parent)
     m_media_play_ctrl->SetBackgroundColour(PB_CARD);
     body->Add(m_media_ctrl, 1, wxEXPAND | wxTOP, FromDIP(6));
     body->Add(m_media_play_ctrl, 0, wxEXPAND | wxTOP, FromDIP(4));
+
+    auto* camera_actions = new wxBoxSizer(wxHORIZONTAL);
+    m_camera_record = new wxButton(camera_card, ID_PB_CAMERA_RECORD, "AUFNAHME");
+    m_camera_timelapse = new wxButton(camera_card, ID_PB_CAMERA_TIMELAPSE, "TIMELAPSE");
+    m_camera_resolution = new wxButton(camera_card, ID_PB_CAMERA_RESOLUTION, "AUFLOESUNG");
+    for (auto* button : {m_camera_record, m_camera_timelapse, m_camera_resolution}) {
+        button->SetMinSize(wxSize(FromDIP(92), FromDIP(30)));
+        button->SetBackgroundColour(wxColour(8, 37, 55));
+        button->SetForegroundColour(PB_TEXT);
+        wxFont font = button->GetFont();
+        font.SetPointSize(8);
+        font.SetWeight(wxFONTWEIGHT_BOLD);
+        button->SetFont(font);
+        button->Enable(false);
+        camera_actions->Add(button, 1, button == m_camera_resolution ? 0 : wxRIGHT, FromDIP(5));
+    }
+    Bind(wxEVT_BUTTON, &PrintbenchNativePanel::on_camera_action, this, ID_PB_CAMERA_RECORD);
+    Bind(wxEVT_BUTTON, &PrintbenchNativePanel::on_camera_action, this, ID_PB_CAMERA_TIMELAPSE);
+    Bind(wxEVT_BUTTON, &PrintbenchNativePanel::on_camera_action, this, ID_PB_CAMERA_RESOLUTION);
+    body->Add(camera_actions, 0, wxEXPAND | wxTOP, FromDIP(5));
     right_hero->Add(camera_card, 1, wxEXPAND | wxBOTTOM, FromDIP(8));
 
     auto* quick_card = make_card(this, "SCHNELLSTEUERUNG", body);
@@ -537,6 +563,34 @@ wxStaticText* PrintbenchNativePanel::add_value(wxWindow* parent, wxSizer* sizer,
     return value;
 }
 
+void PrintbenchNativePanel::on_camera_action(wxCommandEvent& event)
+{
+    if (!m_machine || !m_machine->is_connected() || !m_machine->has_ipcam)
+        return;
+
+    switch (event.GetId()) {
+    case ID_PB_CAMERA_RECORD:
+        m_machine->command_ipcam_record(!m_machine->camera_recording_when_printing);
+        break;
+    case ID_PB_CAMERA_TIMELAPSE:
+        if (!m_machine->is_support_timelapse || m_machine->printer_type == "N7")
+            return;
+        m_machine->command_ipcam_timelapse(!m_machine->camera_timelapse);
+        break;
+    case ID_PB_CAMERA_RESOLUTION: {
+        const auto& modes = m_machine->camera_resolution_supported;
+        if (modes.size() <= 1)
+            return;
+        auto it = std::find(modes.begin(), modes.end(), m_machine->camera_resolution);
+        const size_t index = it == modes.end() ? 0 : (static_cast<size_t>(std::distance(modes.begin(), it)) + 1) % modes.size();
+        m_machine->command_ipcam_resolution_set(modes[index]);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void PrintbenchNativePanel::refresh_from_machine(MachineObject* machine)
 {
     const bool machine_changed = machine != m_machine;
@@ -633,6 +687,28 @@ void PrintbenchNativePanel::apply_snapshot(const PrintbenchSnapshot& s)
     if (s.camera_timelapse)
         camera += "  TL";
     m_camera->SetLabel(camera);
+    const bool camera_connected = m_machine != nullptr && m_machine->is_connected() && s.has_camera;
+    if (m_camera_record) {
+        m_camera_record->Enable(camera_connected);
+        m_camera_record->SetLabel(s.camera_recording ? "STOP AUFNAHME" : "AUFNAHME");
+        m_camera_record->SetBackgroundColour(s.camera_recording ? wxColour("#651B2A") : wxColour(8, 37, 55));
+    }
+    if (m_camera_timelapse) {
+        const bool timelapse_control = camera_connected && s.camera_timelapse_control_supported;
+        m_camera_timelapse->Enable(timelapse_control);
+        m_camera_timelapse->SetLabel(s.camera_timelapse ? "TIMELAPSE AUS" : "TIMELAPSE");
+        m_camera_timelapse->SetBackgroundColour(s.camera_timelapse ? wxColour("#0A63D8") : wxColour(8, 37, 55));
+        m_camera_timelapse->SetToolTip(timelapse_control
+            ? "Timelapse am Drucker umschalten"
+            : (camera_connected ? "P2S-Firmware meldet Timelapse, lehnt direkte LAN-Steuerung jedoch ab"
+                                : "Kamera nicht verbunden"));
+    }
+    if (m_camera_resolution) {
+        const bool has_modes = camera_connected && m_machine && m_machine->camera_resolution_supported.size() > 1;
+        m_camera_resolution->Enable(has_modes);
+        const wxString resolution = s.camera_resolution.empty() ? "AUFLOESUNG" : wxString::FromUTF8(s.camera_resolution);
+        m_camera_resolution->SetLabel(resolution);
+    }
 
     if (s.has_ams)
         m_ams_environment->SetLabel(wxString::Format("%.1f C  |  Humidity %d", s.ams_temp_c, s.ams_humidity));

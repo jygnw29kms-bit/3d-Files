@@ -48,6 +48,7 @@ private:
     void activate_nav(size_t index);
     void handle_nav(size_t index);
     void scroll_to(wxWindow* target);
+    void on_camera_action(wxCommandEvent& event);
 
     PrintbenchCollector m_collector;
     MachineObject* m_machine{nullptr};
@@ -58,6 +59,9 @@ private:
     wxButton* m_pause_resume{nullptr};
     wxButton* m_stop{nullptr};
     wxButton* m_light{nullptr};
+    wxButton* m_camera_record{nullptr};
+    wxButton* m_camera_timelapse{nullptr};
+    wxButton* m_camera_resolution{nullptr};
     std::array<wxButton*, 4> m_speed_buttons{};
     wxStaticText* m_printer_name{nullptr};
     wxStaticText* m_header_status{nullptr};
